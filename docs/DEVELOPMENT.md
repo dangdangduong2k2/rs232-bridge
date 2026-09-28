@@ -42,6 +42,14 @@ Làm theo [hướng dẫn cài](INSTALLATION.md), sau đó kiểm tra helper, đ
 
 ## Chuẩn bị bản phát hành
 
+Kiểm thử Q/Session phần cứng (chỉ chạy khi reader rảnh, sau build/test):
+
+```powershell
+.\test-results\BasebandSdk.exe COM52:115200 COM49
+```
+
+Bài này dùng Nation SDK qua bridge, đóng kết nối rồi đọc độc lập CFG9 bằng ZK SDK. Có Set tạm Q/Session và khôi phục cặp ban đầu trong `finally`; không ghi dữ liệu thẻ. Cần copy DLL ZK x64 từ `payload/bin/x64` vào `test-results` trước khi chạy. File log/kết quả nằm ngoài Git để tránh công bố dữ liệu máy/thẻ.
+
 1. Cập nhật phiên bản, tài liệu, lỗi đã biết và kiểm chứng.
 2. Build và test thành công.
 3. Sao chép EXE vừa build và tạo checksum:

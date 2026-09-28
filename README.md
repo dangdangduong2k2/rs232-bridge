@@ -2,11 +2,11 @@
 
 Bộ chuyển giao thức để phần mềm Nation dùng `GReaderApi.dll` kết nối module ZK qua RS232, giữ nguyên phần mềm Nation.
 
-**Bản thử nghiệm 0.5 RC.** Đã thử đọc và ghi EPC/User trên module ZK 4 anten; chưa thay thế toàn bộ SDK Nation. Xem [các lỗi đã biết](docs/KNOWN_ISSUES.md).
+**Bản thử nghiệm 0.5 RC3.** Đã thử đọc và ghi EPC/User trên module ZK 4 anten; chưa thay thế toàn bộ SDK Nation. Xem [các lỗi đã biết](docs/KNOWN_ISSUES.md).
 
 ## Tải và cài
 
-**[Tải EXE](https://github.com/dangdangduong2k2/rs232-bridge/releases/download/v0.5.0-rc.2/RS232-Bridge-Setup.exe)** · [Trang phát hành](https://github.com/dangdangduong2k2/rs232-bridge/releases/tag/v0.5.0-rc.2)
+**[Tải EXE](https://github.com/dangdangduong2k2/rs232-bridge/releases/download/v0.5.0-rc.3/RS232-Bridge-Setup.exe)** · [Trang phát hành](https://github.com/dangdangduong2k2/rs232-bridge/releases/tag/v0.5.0-rc.3)
 
 1. Cắm module ZK, đóng phần mềm đang dùng cổng COM.
 2. Chạy `RS232-Bridge-Setup.exe`, bấm **setup**, xác nhận quyền quản trị Windows.

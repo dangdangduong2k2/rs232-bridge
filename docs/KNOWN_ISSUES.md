@@ -1,5 +1,11 @@
 # Trạng thái lỗi — 0.5 RC
 
+## RC3: Q/Session và Get đầu phiên
+
+- RC2 chỉ lưu Q/Session ở bridge rồi truyền vào inventory. Kiểm thử reconnect RC2 chưa xác nhận cặp cấu hình CFG9 trên ZK; do đó không chứng minh đồng bộ với phần mềm ZK.
+- RC3 đọc/ghi CFG9 thật, Get và inventory lấy lại dữ liệu trên module. Get đầu tiên được kiểm thử không Set trước và không cần file trạng thái.
+- Các ô Q/Session trong Answer Mode của demo ZK là lựa chọn cục bộ của demo, không phải kết quả Get từ reader. `GetQS` cũ bị module thử trả 0xEE; dùng CFG9 để đối chiếu.
+
 ## Đã sửa trong source và bộ cài 0.5
 
 - Thiếu Set/Get tần số: đã thêm handler band và working frequency, quy đổi kênh theo MHz.

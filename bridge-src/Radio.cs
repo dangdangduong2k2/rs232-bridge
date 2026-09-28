@@ -10,13 +10,22 @@ namespace NationZkBridge {
         public RadioRegion(byte band,byte min,byte max){Band=band;Min=min;Max=max;}
         public bool Same(RadioRegion other){return other!=null&&Band==other.Band&&Min==other.Min&&Max==other.Max;}
     }
-    public interface IRadioReader {
+    public interface IQueryReader {
+        QueryParameters ReadQuery();
+        void SetQuery(QueryParameters value,bool persist);
+    }
+    public interface IRadioReader : IQueryReader {
         byte[] ReadPowers();
         void SetPowers(byte[] values,bool persist,byte selectedMask=255);
         RadioRegion ReadRegion();
         void SetRegion(RadioRegion value,bool persist);
         int ReadProfile();
         void SetProfile(int profile,bool persist);
+    }
+    public sealed class QueryParameters {
+        public byte Q, Session;
+        public QueryParameters(byte q,byte session){Q=q;Session=session;}
+        public void Validate(){if(Q>15||Session>3)throw new NotSupportedException("ZK Q/Session cannot be represented by Nation (Q="+Q+", Session="+Session+")");}
     }
     // Channel numbers come from the supplied Nation demo v0.39 and Ex10 v2.25.
     // Never copy channel indexes across brands: China's Nation channel 0 is ZK 2.

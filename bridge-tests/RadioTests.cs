@@ -16,8 +16,12 @@ class RadioTests {
         public RadioRegion ReadRegion(){return Region;}
         public void SetRegion(RadioRegion r,bool persist){Writes++;Persist=persist;if(Fail)throw new IOException("readback mismatch");Region=r;}
         public int ReadProfile(){return Profile;}
+        public byte Q=6,Session=1;public bool FailQuery;
+        public QueryParameters ReadQuery(){if(FailQuery)throw new IOException("query read failed");return new QueryParameters(Q,Session);}
+        public void SetQuery(QueryParameters p,bool persist){Writes++;Persist=persist;if(Fail)throw new IOException("query readback mismatch");Q=p.Q;Session=p.Session;}
         public void SetProfile(int p,bool persist){Writes++;Persist=persist;if(Fail)throw new IOException("readback mismatch");Profile=p;}
-        public List<Tag> Scan(byte a,Inventory r,byte q,byte s,byte t,CancellationToken c){return new List<Tag>();}
+        public byte ScannedQ,ScannedSession;public readonly ManualResetEvent Scanned=new ManualResetEvent(false);
+        public List<Tag> Scan(byte a,Inventory r,byte q,byte s,byte t,CancellationToken c){ScannedQ=q;ScannedSession=s;Scanned.Set();return new List<Tag>();}
         public void Dispose(){}
     }
     static Frame reply;static Frame Send(Bridge b,int key,params byte[] data){reply=null;b.Handle(new Frame(0x10000u+(uint)key,data));if(reply==null)throw new Exception("No response");return reply;}
@@ -25,6 +29,11 @@ class RadioTests {
     static int Main(){string path=Path.Combine(Path.GetTempPath(),"bridge-radio-"+Guid.NewGuid()+".xml");try{
         var device=new Fake();var state=new BridgeState(path);
         using(var b=new Bridge(device,delegate(Frame f){reply=f;},delegate(string s){},115200,state)){
+            var initial=Send(b,0x20c);Assert(BitConverter.ToString(initial.Data)=="01-06-01-02"&&device.Writes==0,"First Get reads native profile/Q/Session before any Set");
+            device.Q=3;device.Session=2;initial=Send(b,0x20c);Assert(initial.Data[1]==3&&initial.Data[2]==2,"Get reflects external ZK changes instead of stale state");
+            OK(Send(b,0x20b,2,5,255,0),"Q-only native Set");Assert(device.Q==5&&device.Session==2&&!device.Persist,"Q-only Set preserves native Session");
+            OK(Send(b,0x20b,3,3,255,0),"Session-only native Set");Assert(device.Q==5&&device.Session==3,"Session-only Set preserves native Q");
+            device.FailQuery=true;Assert(Send(b,0x20c).Control==0x10000,"Native query failure is not hidden by cached Q/Session");device.FailQuery=false;
             OK(Send(b,0x201,2,7,255,0),"Partial power accepted");Assert(device.Values[0]==8&&device.Values[1]==7&&device.Values[2]==10&&device.Values[3]==11&&!device.Persist&&device.Selected==2,"Only selected antenna changes, temporary flag preserved");
             var f=Send(b,0x202);Assert(BitConverter.ToString(f.Data)=="01-08-02-07-03-0A-04-0B","Get returns real per-antenna vector");
             int writes=device.Writes;Send(b,0x201,1,50);Send(b,0x201,1,8,1,9);Assert(device.Writes==writes,"Invalid/duplicate antenna power causes no native writes");
@@ -48,6 +57,8 @@ class RadioTests {
         using(var b=new Bridge(device,delegate(Frame f){reply=f;},delegate(string s){},115200,state)){
             Assert(Send(b,0x20c).Data[1]==9,"Temporary baseband survives client reconnect");
             Assert(BitConverter.ToString(Send(b,0x20a).Data)=="00-19-0C","Reporting survives client reconnect");
+            device.Q=2;device.Session=3;Send(b,0x210,0,0,0,1,0);
+            Assert(device.Scanned.WaitOne(2000)&&device.ScannedQ==2&&device.ScannedSession==3,"Inventory refreshes native Q/Session even without prior Get or Set");b.Stop();
         }
         string blocked=path+".directory";Directory.CreateDirectory(blocked);
         try{var failedState=new BridgeState(blocked);

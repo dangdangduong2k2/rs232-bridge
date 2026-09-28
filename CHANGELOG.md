@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.5 RC3 — 2026-09-28
+
+- Sửa Q/Session chỉ lưu ở bridge: Set/Get nay dùng CFG9 thật của Ex10, đọc lại sau Set và trước inventory.
+- Get đầu phiên không phụ thuộc Set hoặc Q/Session trong file của bridge; phản ánh thay đổi từ phần mềm ZK. Thêm regression cho Get đầu tiên, thay đổi bên ngoài, cập nhật từng trường và reconnect.
+- Kiểm chứng độc lập trên COM49: SDK Nation Get đầu tiên với timeout mặc định, Q=0/15, Session=0..3 và đọc ngược qua SDK ZK; khôi phục Q=6, Session=1. Không ghi thẻ.
+
 ## 0.5 RC2 — 2026-09-28
 
 - Đã cài và kiểm chứng trên COM thật: mode 5 và đủ 13 EPC speed, 7 band, từng anten, reconnect 100/350/700 ms.

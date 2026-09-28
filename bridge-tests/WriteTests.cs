@@ -12,7 +12,9 @@ class WriteTests {
     static int checks;
     static void Check(bool ok,string label){if(!ok)throw new Exception(label);checks++;Console.WriteLine("PASS: "+label);}
     static byte[] Hex(string s){s=s.Replace("-","");var b=new byte[s.Length/2];for(int n=0;n<b.Length;n++)b[n]=Convert.ToByte(s.Substring(n*2,2),16);return b;}
-    sealed class Device:IReader,ITagWriter,IWriteTransport {
+    sealed class Device:IReader,ITagWriter,IWriteTransport,IQueryReader {
+        public QueryParameters ReadQuery(){return new QueryParameters(4,0);}
+        public void SetQuery(QueryParameters value,bool persist){}
         public int Rc,TagError,Calls,SelectRc;public TagWrite Last;public readonly List<byte> Masks=new List<byte>();
         public readonly ManualResetEvent Scanning=new ManualResetEvent(false);
         public ReaderInfo Info {get{return new ReaderInfo{Identity="WRITE-TEST",Antennas=4,Version=new byte[]{2,8},MaxPower=30};}}

@@ -10,6 +10,9 @@ foreach ($test in @('ProtocolTests','RadioTests','SdkIntegration','RadioSdk')) {
     & $compiler /nologo /platform:x64 "/out:$testDir\$test.exe" "/r:$testDir\$reference" (Join-Path $root "bridge-tests\$test.cs")
     if ($LASTEXITCODE -ne 0) { throw 'Test compile failed' }
 }
+# Compile the opt-in hardware regression; never open COM ports in the default suite.
+& $compiler /nologo /platform:x64 "/out:$testDir\BasebandSdk.exe" "/r:$testDir\NationZkBridge.exe" "/r:$testDir\GReaderApi.dll" (Join-Path $root 'bridge-tests\BasebandSdk.cs')
+if ($LASTEXITCODE -ne 0) { throw 'Baseband hardware test compile failed' }
 & (Join-Path $testDir 'ProtocolTests.exe') | Tee-Object -FilePath (Join-Path $testDir 'protocol-tests.txt')
 if ($LASTEXITCODE -ne 0) { throw 'Protocol tests failed' }
 & (Join-Path $testDir 'RadioTests.exe') | Tee-Object -FilePath (Join-Path $testDir 'radio-tests.txt')

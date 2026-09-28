@@ -45,7 +45,9 @@ F-hop hỗ trợ một kênh hoặc danh sách kênh liên tiếp. Danh sách r�
 - Get trả vector thật từng anten bằng `GetAntennaPower`. Số phần tử phải khớp cấu hình 1 hoặc 4 anten.
 - Set một phần đọc các giá trị hiện tại, thay anten được chọn và gửi vector bằng `SetAntennaPower`; đọc lại độc lập, sai kết quả trả lỗi.
 - Công suất, band và profile dùng cờ lưu/tạm của ZK. Việc đọc lại đúng ngay sau Set không chứng minh đã lưu qua mất nguồn.
-- Q, Session, SearchType và bộ lọc tag là logic bridge. Chúng giữ qua đóng/mở Nation. Khi lưu, chúng nằm trong `%ProgramData%\NationComPort\radio-state.xml`; ghi file tạm rồi thay thế atomic. Chỉ trường được yêu cầu lưu được cập nhật, không lưu lẫn các thay đổi tạm khác.
+- Từ RC3, Q/Session được đọc trực tiếp qua Ex10 `GetCfgParameter(CFG9)`. Set dùng `SetCfgParameter(CFG9)` rồi Get đối chiếu; `FF00` đặt tạm, mặc định đặt và lưu trên module. CFG9 là một cặp: lưu một trường sẽ lưu cả cặp, trường còn lại lấy giá trị hiện tại từ ZK. Trước inventory bridge cũng đọc CFG9 để truyền đúng Q/Session vào `Inventory_G2`. Không dùng Q/Session cũ trong file để trả Get.
+- `GetQS` đời cũ trả `0xEE` trên module UHF7182M đang thử; không dùng API đó để xác nhận CFG9. Các ô Q/Session trong tab Answer Mode của demo ZK là tham số của ứng dụng cho lần inventory tới, không tự đồng bộ khi mở demo.
+- SearchType và bộ lọc tag vẫn là logic bridge, giữ qua reconnect và lưu atomic trong `%ProgramData%\NationComPort\radio-state.xml` khi được yêu cầu. Q/Session Auto của ZK (255) chưa có ánh xạ Nation, sẽ báo không hỗ trợ.
 - Trạng thái tạm của bridge mất khi worker/dịch vụ khởi động lại. Trạng thái tạm của module phụ thuộc mất nguồn/reset module. Nhãn profile/kênh lưu ở bridge chỉ được dùng khi khớp Get phần cứng.
 - Dừng inventory trước khi Set cấu hình RF. Chế độ cấu hình không tự phát lệnh đọc/ghi thẻ.
 

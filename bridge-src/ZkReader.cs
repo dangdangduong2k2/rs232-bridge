@@ -16,6 +16,8 @@ namespace NationZkBridge {
         [DllImport(Dll,CallingConvention=CallingConvention.StdCall)] internal static extern int ExtGetRegion(ref byte address,ref byte band,ref byte max,ref byte min,int handle);
         [DllImport(Dll,CallingConvention=CallingConvention.StdCall)] internal static extern int ExtSetRegion(ref byte address,byte flag,byte band,byte max,byte min,int handle);
         [DllImport(Dll,CallingConvention=CallingConvention.StdCall)] internal static extern int SetExtProfile(ref byte address,byte option,ref int profile,int handle);
+        [DllImport(Dll,CallingConvention=CallingConvention.StdCall)] internal static extern int GetCfgParameter(ref byte address,byte number,[Out] byte[] data,ref int length,int handle);
+        [DllImport(Dll,CallingConvention=CallingConvention.StdCall)] internal static extern int SetCfgParameter(ref byte address,byte option,byte number,byte[] data,int length,int handle);
         [DllImport(Dll,CallingConvention=CallingConvention.StdCall)] internal static extern int SetAntennaMultiplexing(ref byte address,byte mask,int handle);
         [DllImport(Dll,CallingConvention=CallingConvention.StdCall)] internal static extern int WriteData_G2(ref byte address,byte[] epc,byte words,byte epcWords,byte memory,byte wordPointer,byte[] data,byte[] password,byte maskMem,byte[] maskAdr,byte maskLen,byte[] maskData,ref int tagError,int handle);
         [DllImport(Dll,CallingConvention=CallingConvention.StdCall)] internal static extern int ExtWriteData_G2(ref byte address,byte[] epc,byte words,byte epcWords,byte memory,byte[] wordPointer,byte[] data,byte[] password,byte maskMem,byte[] maskAdr,byte maskLen,byte[] maskData,ref int tagError,int handle);
@@ -87,6 +89,18 @@ namespace NationZkBridge {
             if(!ReadRegion().Same(value))throw new IOException("Region readback mismatch; hardware may have changed");
         }
         public int ReadProfile(){int p=0;Check("Get extended profile",Native.SetExtProfile(ref address,0,ref p,handle));if(p<0||p>65535)throw new InvalidDataException("Invalid extended profile");return p;}
+        // Ex10 CFG9 is the native fast-query Q/Session pair. Legacy GetQS is
+        // rejected by UHF7182M (0xEE); never fall back to cached Nation values.
+        public QueryParameters ReadQuery(){
+            var data=new byte[256];int length=0;
+            Check("Get Q/Session CFG9",Native.GetCfgParameter(ref address,9,data,ref length,handle));
+            if(length!=2)throw new InvalidDataException("Invalid ZK CFG9 length");
+            var value=new QueryParameters(data[0],data[1]);value.Validate();return value;
+        }
+        public void SetQuery(QueryParameters value,bool persist){
+            value.Validate();Check("Set Q/Session CFG9",Native.SetCfgParameter(ref address,(byte)(persist?0:1),9,new byte[]{value.Q,value.Session},2,handle));
+            var actual=ReadQuery();if(actual.Q!=value.Q||actual.Session!=value.Session)throw new IOException("Q/Session readback mismatch; hardware may have changed");
+        }
         public void SetProfile(int value,bool persist){
             if(value<0||value>65535)throw new ArgumentException("Profile ID");ReadProfile();int p=value;Check("Set extended profile",Native.SetExtProfile(ref address,(byte)(persist?1:2),ref p,handle));
             if(ReadProfile()!=value)throw new IOException("Profile readback mismatch; hardware may have changed");

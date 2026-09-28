@@ -37,7 +37,7 @@ namespace NationZkBridge {
                     case 0x100:
                         Empty(f);
                         var b=new Bytes().Text(reader.Info.Identity).U32((uint)(DateTime.UtcNow-started).TotalSeconds).Text("Nation-ZK bridge");
-                        b.U8(1).U32(0x00010000).U8(2).Text("ZK compatibility bridge 0.5 RC");Reply(f,b.ToArray());break;
+                        b.U8(1).U32(0x00010000).U8(2).Text("ZK compatibility bridge 0.5 RC3");Reply(f,b.ToArray());break;
                     case 0x101:
                         Empty(f);Reply(f,new byte[]{0,reader.Info.Version[0],reader.Info.Version[1],0});break;
                     case 0x103:
@@ -57,7 +57,7 @@ namespace NationZkBridge {
                     case 0x205:SetFrequency(f);break;
                     case 0x206:GetFrequency(f);break;
                     case 0x20c:
-                        Empty(f);lock(deviceLock){int actual=Radio.ReadProfile();byte speed=ProfileMap.FromZk(actual,state.Active.NationSpeed);Reply(f,new byte[]{speed,q,session,target});}break;
+                        Empty(f);lock(deviceLock){int actual=Radio.ReadProfile();byte speed=ProfileMap.FromZk(actual,state.Active.NationSpeed);var query=RefreshQuery();Reply(f,new byte[]{speed,query.Q,query.Session,target});}break;
                     case 0x20b:SetBaseband(f);break;
                     case 0x20a:
                         Empty(f);Reply(f,new Bytes().U16(duplicateUnits).U8(rssiThreshold).ToArray());break;
@@ -84,6 +84,7 @@ namespace NationZkBridge {
               catch(IOException ex){log(ex.Message);Error(f,9);}
         }
         static int NationBaud(int baud){switch(baud){case 9600:return 0;case 19200:return 1;case 115200:return 2;case 230400:return 3;case 460800:return 4;default:return -1;}}
+        QueryParameters RefreshQuery(){var source=reader as IQueryReader;if(source==null)throw new NotSupportedException("Native Q/Session unavailable");var value=source.ReadQuery();value.Validate();state.Commit(delegate(StateData d){d.Q=value.Q;d.Session=value.Session;},false);return value;}
         void SetPower(Frame f) {
             if(Running){Error(f,5);return;}
             var c=new Cursor(f.Data);var ports=new Dictionary<byte,byte>();bool persist=true;bool hasPersistence=false;
@@ -122,7 +123,11 @@ namespace NationZkBridge {
                 case 255:if(v>1)throw new InvalidDataException("Baseband persistence");persist=v==1;break;
                 default:throw new NotSupportedException("Baseband parameter "+p);
             }}
-            try{lock(deviceLock){int zk=-1;if(speed>=0){zk=ProfileMap.ToZk((byte)speed);Radio.SetProfile(zk,persist);log("Nation EPC speed "+speed+" -> ZK profile "+zk+"; compatibility preset, see RADIO_MAPPING.md");}
+            try{lock(deviceLock){
+                // Read before partial updates so settings changed in ZK are preserved.
+                var query=Radio.ReadQuery();if(seen.Contains(2))query.Q=nq;if(seen.Contains(3))query.Session=ns;query.Validate();
+                int zk=-1;if(speed>=0){zk=ProfileMap.ToZk((byte)speed);Radio.SetProfile(zk,persist);log("Nation EPC speed "+speed+" -> ZK profile "+zk+"; compatibility preset, see RADIO_MAPPING.md");}
+                if(seen.Contains(2)||seen.Contains(3))Radio.SetQuery(query,persist);
                 state.Commit(delegate(StateData d){if(seen.Contains(2))d.Q=nq;if(seen.Contains(3))d.Session=ns;if(seen.Contains(4))d.Target=nt;if(speed>=0){d.NationSpeed=speed;d.ZkProfile=zk;}},persist);}ReplyCode(f,0);
             }catch(ZkException ex){log(ex.Message);ReplyCode(f,(byte)(ex.Code>=0xFD?1:6));}catch(IOException ex){log(ex.Message);ReplyCode(f,6);}
         }
@@ -134,6 +139,7 @@ namespace NationZkBridge {
         }
         void Start(Frame origin,Inventory request) {
             Stop(); // Dispose a completed worker before the next inventory.
+            lock(deviceLock){RefreshQuery();}
             cancellation=new CancellationTokenSource();CancellationToken token=cancellation.Token;
             inventoryThread=new Thread(delegate(){
                 byte end=0;byte nextTarget=(byte)(target==2?0:target);var recent=new Dictionary<string,DateTime>();

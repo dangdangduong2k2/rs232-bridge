@@ -59,6 +59,9 @@ namespace NationZkBridge {
     public sealed class SimReader : IReader,IRadioReader {
         readonly ReaderInfo info;
         byte[] powers;RadioRegion region=new RadioRegion(2,0,49);int profile=146;
+        static byte simulatedQ=4,simulatedSession=0;
+        public QueryParameters ReadQuery(){return new QueryParameters(simulatedQ,simulatedSession);}
+        public void SetQuery(QueryParameters value,bool persist){value.Validate();simulatedQ=value.Q;simulatedSession=value.Session;}
         public SimReader(byte antennas){info=new ReaderInfo{Identity="SIMULATED-ZK-BRIDGE",Antennas=antennas,MinPower=0,MaxPower=30,Power=20,Version=new byte[]{0,1},NationRegions=RegionMap.Supported()};powers=new byte[antennas];for(int i=0;i<antennas;i++)powers[i]=20;}
         public byte[] ReadPowers(){return (byte[])powers.Clone();}
         public void SetPowers(byte[] values,bool persist,byte selectedMask=255){powers=(byte[])values.Clone();info.Power=powers[0];}

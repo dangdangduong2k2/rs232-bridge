@@ -7,7 +7,9 @@ class ProtocolTests {
     static int checks;
     static void Check(bool ok,string label){if(!ok)throw new Exception(label);checks++;Console.WriteLine("PASS: "+label);}
     static void Reject(Action action,string label){try{action();}catch(InvalidDataException){Check(true,label);return;}throw new Exception("Accepted "+label);}
-    sealed class FailingReader:IReader {
+    sealed class FailingReader:IReader,IQueryReader {
+        public QueryParameters ReadQuery(){return new QueryParameters(4,0);}
+        public void SetQuery(QueryParameters value,bool persist){}
         public ReaderInfo Info {get{return new ReaderInfo{Antennas=4,Identity="test",MaxPower=30};}}
         public byte ReadPower(){return 22;}public void SetPower(byte p,bool persist){}
         public List<Tag> Scan(byte ant,Inventory i,byte q,byte s,byte t,CancellationToken c){throw new ZkException("test disconnect",0x30);}

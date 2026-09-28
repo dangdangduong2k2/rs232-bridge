@@ -1,5 +1,15 @@
 # Kiểm chứng 0.5 RC — 28/09/2026
 
+## RC3: kiểm chứng Q/Session trên module thật
+
+- Module UHF7182M type 0x75, firmware 2.8, COM49/115200. `GetQS` cũ trả 0xEE; `GetCfgParameter(9)` trả `06-01` (Q=6, Session=1). Bridge RC2 trước sửa đang trả Q=0 từ state cũ.
+- Bài mới `BasebandSdk`: **38 assertion qua TCP**, rồi **38 assertion qua COM52 và dịch vụ RC3 đã cài**. Dùng DLL Nation gốc, timeout mặc định của `SendSynMsg`.
+- Get là lệnh đầu tiên sau kết nối, trước mọi Set; đọc đúng CFG9 mà không cần khởi tạo state. Đặt CFG9 từ SDK ZK, đóng cổng rồi Get qua Nation đọc đúng thay đổi.
+- Set Q riêng/Session riêng; Q=0 và 15, Session=0..3; đóng Nation rồi đọc độc lập qua SDK ZK xác nhận cặp đã được thay đổi thật. Ba lần reconnect, Get đầu phiên đều đạt.
+- Khôi phục và đọc lại Q=6, Session=1. Tất cả Set kiểm thử là tạm; không đổi profile/tần số/công suất, không inventory hoặc ghi thẻ.
+- RC3 local suite: 24 packaging, 18 protocol, 60 radio, 39 write; tích hợp SDK mô phỏng và RadioSdk 170 assertion đạt. Hash worker đã cài khớp build.
+- Chưa power-cycle để nghiệm thu flash. Chưa tái hiện độc lập nguyên nhân lỗi giao diện Get đầu tiên của người dùng; regression SDK nêu trên đã đạt.
+
 ## Kiểm thử mới
 
 Trên Windows x64/.NET Framework bằng source và EXE vừa build:
