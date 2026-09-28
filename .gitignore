@@ -1,0 +1,10 @@
+/test-results/
+/payload/bin/
+/payload/diagnostics/
+/payload/NationComService.exe
+/payload.zip
+/NationComPortSetup.exe
+*.pdb
+*.log
+*.user
+*.suo

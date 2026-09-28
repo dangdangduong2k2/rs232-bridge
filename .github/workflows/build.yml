@@ -1,0 +1,23 @@
+name: Windows build and tests
+on:
+  push:
+  pull_request:
+permissions:
+  contents: read
+jobs:
+  build:
+    runs-on: windows-2022
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build
+        shell: powershell
+        run: .\build.ps1
+      - name: Test without physical hardware
+        shell: powershell
+        run: .\test.ps1
+      - uses: actions/upload-artifact@v4
+        with:
+          name: rs232-bridge-build
+          path: |
+            NationComPortSetup.exe
+            test-results/*.txt
