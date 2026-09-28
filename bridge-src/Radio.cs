@@ -27,7 +27,7 @@ namespace NationZkBridge {
         public bool Contains(RadioRegion r){return r.Band==Band&&r.Min>=Offset&&r.Max>=r.Min&&r.Max<Offset+Count;}
         public static readonly RegionMap[] All={
             new RegionMap(0,1,2,16),new RegionMap(1,8,2,16),new RegionMap(3,2,0,50),
-            new RegionMap(4,9,0,4),new RegionMap(5,31,0,4),new RegionMap(12,3,0,32),new RegionMap(13,9,1,3),
+            new RegionMap(4,9,0,4),new RegionMap(5,31,0,4),new RegionMap(13,9,1,3),
             new RegionMap(15,1,0,20)
         };
         public static byte[] Supported(){var b=new List<byte>();foreach(var m in All)b.Add(m.Nation);return b.ToArray();}

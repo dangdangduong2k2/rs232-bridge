@@ -6,7 +6,7 @@ Bộ chuyển giao thức để phần mềm Nation dùng `GReaderApi.dll` kết
 
 ## Tải và cài
 
-**[Tải EXE](https://github.com/dangdangduong2k2/rs232-bridge/releases/download/v0.5.0-rc.1/RS232-Bridge-Setup.exe)** · [Trang phát hành](https://github.com/dangdangduong2k2/rs232-bridge/releases/tag/v0.5.0-rc.1)
+**[Tải EXE](https://github.com/dangdangduong2k2/rs232-bridge/releases/download/v0.5.0-rc.2/RS232-Bridge-Setup.exe)** · [Trang phát hành](https://github.com/dangdangduong2k2/rs232-bridge/releases/tag/v0.5.0-rc.2)
 
 1. Cắm module ZK, đóng phần mềm đang dùng cổng COM.
 2. Chạy `RS232-Bridge-Setup.exe`, bấm **setup**, xác nhận quyền quản trị Windows.

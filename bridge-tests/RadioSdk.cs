@@ -17,7 +17,7 @@ class RadioSdk {
             changed=true;var values=new Dictionary<byte,byte>();foreach(var pair in oldPower.DicPower)values[pair.Key]=(byte)Math.Max(0,pair.Value-pair.Key+1);
             Send(new MsgBaseSetPower{DicPower=values,IsPersistence=0});var power=Send(new MsgBaseGetPower());foreach(var p in values)Check(power.DicPower[p.Key]==p.Value,"Antenna "+p.Key+" power="+p.Value);
             Send(new MsgBaseSetPower{DicPower=new Dictionary<byte,byte>{{1,7}},IsPersistence=0});power=Send(new MsgBaseGetPower());Check(power.DicPower[1]==7,"Partial antenna power update");foreach(var p in values)if(p.Key!=1)Check(power.DicPower[p.Key]==p.Value,"Other antenna preserved "+p.Key);
-            foreach(byte band in new byte[]{0,1,3,4,5,12,13,15}){
+            foreach(byte band in new byte[]{0,1,3,4,5,13,15}){
                 Send(new MsgBaseSetFreqRange{FreqRangeIndex=band,IsPersistence=0});Check(Send(new MsgBaseGetFreqRange()).FreqRangeIndex==band,"Band roundtrip "+band);
                 SetFrequency(false,new List<byte>{0});var freq=Send(new MsgBaseGetFrequency());Check(freq.AutoIndex==0&&freq.ListFreqCursor.Count==1&&freq.ListFreqCursor[0]==0,"Fixed channel zero "+band);
                 SetFrequency(true,null);Check(Send(new MsgBaseGetFrequency()).AutoIndex==1,"Auto channel range "+band);

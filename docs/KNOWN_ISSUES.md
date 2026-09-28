@@ -9,11 +9,12 @@
 - Baseband/reporting mất sau reconnect: state giữ qua phiên, chế độ lưu ghi file atomic. Kiểm thử restart đối tượng lưu trữ và reconnect TCP đạt.
 - Setup COM bị chiếm: kiểm tra cổng Nation trước khi dừng dịch vụ/thay payload; yêu cầu đóng Nation nếu cổng còn bận.
 
-## Cần nghiệm thu thêm
+## Đã nghiệm thu RC2 trên COM thật
 
-- Reconnect COM nhanh: đã bỏ thao tác xóa buffer có thể làm mất request đầu tiên, nhưng cần thử lại trên cặp COM ảo thật. Reconnect TCP 100/350/700 ms đạt không thay thế kiểm thử COM.
-- Chưa nghiệm thu toàn bộ cấu hình mới của bridge 0.5 trên module thật; Nation đang giữ COM nên đợt phát hành này dùng kiểm thử mô phỏng/SDK. Kết quả API riêng không được tính là nghiệm thu bridge.
-- Chưa kiểm tra lưu RF qua mất nguồn, module 1 anten, tháo/cắm USB và chạy dài hạn cho 0.5.
+- Nation SDK gốc → COM52 → dịch vụ bridge → ZK COM49, module type 0x75 firmware 2.8: 170 assertion đạt, gồm 13 EPC speed (có mode 5/FM0 640 kHz), 7 band, fixed/auto channel, power vector và sửa riêng một anten.
+- Reconnect 100/350/700 ms đạt; Q/Session/reporting được giữ. Cấu hình ban đầu đã được khôi phục và đọc lại.
+- Band Nation 12 bị firmware từ chối ZK 0xFF; đã bỏ khỏi capabilities/Set của RC2.
+- Vẫn chưa nghiệm thu lưu RF qua mất nguồn, module 1 anten, tháo/cắm USB và chạy dài hạn.
 
 ## Giới hạn có chủ đích
 

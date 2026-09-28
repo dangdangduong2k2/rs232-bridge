@@ -1,1 +1,1 @@
-eb59223f1cc607e99dd2c8a93ee166494049d2da8ba3f59d4b3340119e5b6499  RS232-Bridge-Setup.exe
+c39dec2ee4bbaf3fd1ad0b0ab0569d174218dba057ea0f208b0997666f3c91d9  RS232-Bridge-Setup.exe

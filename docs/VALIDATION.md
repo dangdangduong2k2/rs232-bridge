@@ -6,16 +6,23 @@ Trên Windows x64/.NET Framework bằng source và EXE vừa build:
 
 - 24 kiểm tra đóng gói; 18 protocol/state; 39 write; 52 kiểm tra cấu hình RF/lưu trạng thái/lỗi readback.
 - Tích hợp DLL Nation nguyên bản kiểm tra đọc/ghi/callback mô phỏng, power vector và cập nhật riêng anten (số assertion callback phụ thuộc lịch chạy).
-- `RadioSdk`: 179 assertion qua DLL Nation nguyên bản, 8 band, fixed/auto frequency, 13 mục EPC speed, công suất riêng từng anten, reconnect TCP 100/350/700 ms, khôi phục trạng thái kiểm thử.
+- `RadioSdk`: 170 assertion qua DLL Nation nguyên bản, 7 band, fixed/auto frequency, 13 mục EPC speed, công suất riêng từng anten, reconnect TCP 100/350/700 ms, khôi phục trạng thái kiểm thử.
 - Test file-state kiểm tra lưu chọn lọc, không ghi lẫn thay đổi tạm, tải lại từ file và lỗi ghi file không báo thành công.
 - Self-extraction kiểm tra SHA256 toàn bộ payload; dừng worker và diagnostic Nation đạt.
 - Các test trong `test.ps1` dùng backend mô phỏng; không cài driver, không đọc/ghi thẻ thật.
 
-## Phần cứng cho 0.5
+## Phần cứng 0.5 RC2 — 28/09/2026
 
-Chưa hoàn tất vì phần mềm Nation đang giữ COM49 qua dịch vụ cũ. Chưa thay worker đang cài, chưa tuyên bố các profile/band mới đều được firmware thật chấp nhận. `bridge-tests/RadioSdk.cs` được chuẩn bị để thử cấu hình tạm qua TCP hoặc COM; không tự chạy trên phần cứng trong `test.ps1`.
-
-Bài kiểm thử phần cứng riêng của `zk-reader-api` đã xác nhận lệnh ZK cho power vector, band và extended profile trên COM49. Nó là bằng chứng cho lệnh ZK, không thay thế nghiệm thu đường Nation → bridge → ZK 0.5.
+- Module ZK type 0x75, firmware 2.8, 4 anten, COM49/115200.
+- Cùng bài `RadioSdk` đạt 170 assertion qua TCP frontend tới module thật, sau đó đạt 170 assertion qua **DLL Nation nguyên bản → COM52 → dịch vụ đã cài → COM49**.
+- 13 mục EPC speed: 0–7, 10–13, Auto; mode 5 Set/Get đúng ZK extended profile 103 (FM0 640 kHz, Tari 6.25 µs).
+- 7 band Nation 0/1/3/4/5/13/15; Get/Set band, kênh cố định và auto đã đọc lại đúng.
+- Power `[8,7,6,5]`, cập nhật riêng ANT1 và giữ các anten còn lại; đọc lại đúng.
+- Reconnect COM với khoảng nghỉ 100/350/700 ms (sáu lượt) không mất query đầu; Q/session/reporting giữ nguyên.
+- Khôi phục `[8,8,8,8]`, band 3/kênh 0–49, profile 146 (preset Nation 1), Q=4/session=0/target=2, reporting=0; kiểm tra lại đạt.
+- Mọi Set trong bài này là tạm thời. Không inventory RF, không ghi dữ liệu thẻ và không power-cycle. Không suy ra khả năng đọc thẻ/s ở từng profile chỉ từ Set/Get.
+- Lần chạy đầu phát hiện Nation band 12 → ZK band 3 bị module trả 0xFF; RC2 bỏ ánh xạ đó và sửa mã lỗi phản hồi. Lần đầu đã khôi phục trạng thái trước khi tiếp tục.
+- Bộ cài chạy thành công, worker đã cài có SHA256 khớp bản build, dịch vụ Running. File EXE Nation và GReaderApi.dll không sửa.
 
 GitHub Actions từng bị chặn bởi billing tài khoản. Kết quả nêu trên là kiểm thử local, không coi workflow tồn tại là CI đã đạt.
 

@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.5 RC2 — 2026-09-28
+
+- Đã cài và kiểm chứng trên COM thật: mode 5 và đủ 13 EPC speed, 7 band, từng anten, reconnect 100/350/700 ms.
+- Bỏ band 12 bị module thật từ chối; dịch lỗi tham số/profile ZK thành không hỗ trợ thay vì lỗi lưu.
+- Giữ giới hạn firmware và khác biệt preset được mô tả trong RADIO_MAPPING.md.
+
+
 ## 0.5 RC — 2026-09-28
 
 - Set/Get công suất vector qua GetAntennaPower/SetAntennaPower; cho phép sửa riêng một anten.

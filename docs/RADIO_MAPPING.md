@@ -33,7 +33,6 @@ Không quy đổi gần đúng tần số. Các kênh hỗ trợ dưới đây k
 | 3 | 2 | 0–49 | 902.75–927.25, bước 0.5 |
 | 4 | 9 | 0–3 | 865.7, 866.3, 866.9, 867.5 |
 | 5 | 31 | 0–3 | 916.8–920.4, bước 1.2 |
-| 12 | 3 | 0–31 | 917.1–923.3, bước 0.2 |
 | 13 | 9 | 1–3 | 866.3, 866.9, 867.5 |
 | 15 | 1 | 0–19 | 920.125–924.875, bước 0.25 |
 
@@ -49,3 +48,5 @@ F-hop hỗ trợ một kênh hoặc danh sách kênh liên tiếp. Danh sách r�
 - Q, Session, SearchType và bộ lọc tag là logic bridge. Chúng giữ qua đóng/mở Nation. Khi lưu, chúng nằm trong `%ProgramData%\NationComPort\radio-state.xml`; ghi file tạm rồi thay thế atomic. Chỉ trường được yêu cầu lưu được cập nhật, không lưu lẫn các thay đổi tạm khác.
 - Trạng thái tạm của bridge mất khi worker/dịch vụ khởi động lại. Trạng thái tạm của module phụ thuộc mất nguồn/reset module. Nhãn profile/kênh lưu ở bridge chỉ được dùng khi khớp Get phần cứng.
 - Dừng inventory trước khi Set cấu hình RF. Chế độ cấu hình không tự phát lệnh đọc/ghi thẻ.
+
+RC2: bỏ band Nation 12 khỏi capabilities và Set vì module type 0x75 firmware 2.8 trả ZK 0xFF cho bảng kênh tương ứng. Lỗi từ chối tham số/profile được dịch thành không hỗ trợ thay vì báo nhầm lỗi lưu.

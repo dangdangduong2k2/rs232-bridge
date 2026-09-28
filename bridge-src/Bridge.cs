@@ -98,7 +98,7 @@ namespace NationZkBridge {
             if(Running){Error(f,5);return;}var c=new Cursor(f.Data);byte band=c.U8();bool persist=true;
             if(c.Left>0){if(c.U8()!=1)throw new InvalidDataException("Band persistence PID");byte v=c.U8();if(v>1)throw new InvalidDataException("Band persistence");persist=v==1;}c.End();
             RegionMap map;try{map=RegionMap.Find(band);}catch(NotSupportedException ex){log(ex.Message);ReplyCode(f,1);return;}
-            try{lock(deviceLock){var value=map.Full();Radio.SetRegion(value,persist);RememberRegion(map,value,1,persist);}ReplyCode(f,0);}catch(IOException ex){log(ex.Message);ReplyCode(f,2);}
+            try{lock(deviceLock){var value=map.Full();Radio.SetRegion(value,persist);RememberRegion(map,value,1,persist);}ReplyCode(f,0);}catch(ZkException ex){log(ex.Message);ReplyCode(f,(byte)(ex.Code>=0xFD?1:2));}catch(IOException ex){log(ex.Message);ReplyCode(f,2);}
         }
         void SetFrequency(Frame f){
             if(Running){Error(f,5);return;}var c=new Cursor(f.Data);byte auto=c.U8();if(auto>1){ReplyCode(f,3);return;}bool persist=true;byte[] channels=null;var seen=new HashSet<byte>();
@@ -124,7 +124,7 @@ namespace NationZkBridge {
             }}
             try{lock(deviceLock){int zk=-1;if(speed>=0){zk=ProfileMap.ToZk((byte)speed);Radio.SetProfile(zk,persist);log("Nation EPC speed "+speed+" -> ZK profile "+zk+"; compatibility preset, see RADIO_MAPPING.md");}
                 state.Commit(delegate(StateData d){if(seen.Contains(2))d.Q=nq;if(seen.Contains(3))d.Session=ns;if(seen.Contains(4))d.Target=nt;if(speed>=0){d.NationSpeed=speed;d.ZkProfile=zk;}},persist);}ReplyCode(f,0);
-            }catch(IOException ex){log(ex.Message);ReplyCode(f,6);}
+            }catch(ZkException ex){log(ex.Message);ReplyCode(f,(byte)(ex.Code>=0xFD?1:6));}catch(IOException ex){log(ex.Message);ReplyCode(f,6);}
         }
         void SetReporting(Frame f) {
             if(Running){Error(f,5);return;}
