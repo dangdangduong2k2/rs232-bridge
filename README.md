@@ -2,11 +2,11 @@
 
 Bộ chuyển giao thức để phần mềm Nation dùng `GReaderApi.dll` kết nối module ZK qua RS232, giữ nguyên phần mềm Nation.
 
-**Bản thử nghiệm 0.4 RC.** Đã thử đọc và ghi EPC/User trên module ZK 4 anten; chưa thay thế toàn bộ SDK Nation. Xem [các lỗi đã biết](docs/KNOWN_ISSUES.md).
+**Bản thử nghiệm 0.5 RC.** Đã thử đọc và ghi EPC/User trên module ZK 4 anten; chưa thay thế toàn bộ SDK Nation. Xem [các lỗi đã biết](docs/KNOWN_ISSUES.md).
 
 ## Tải và cài
 
-**[Tải EXE](https://github.com/dangdangduong2k2/rs232-bridge/releases/download/v0.4.0-rc.1/RS232-Bridge-Setup.exe)** · [Trang phát hành](https://github.com/dangdangduong2k2/rs232-bridge/releases/tag/v0.4.0-rc.1)
+**[Tải EXE](https://github.com/dangdangduong2k2/rs232-bridge/releases/download/v0.5.0-rc.1/RS232-Bridge-Setup.exe)** · [Trang phát hành](https://github.com/dangdangduong2k2/rs232-bridge/releases/tag/v0.5.0-rc.1)
 
 1. Cắm module ZK, đóng phần mềm đang dùng cổng COM.
 2. Chạy `RS232-Bridge-Setup.exe`, bấm **setup**, xác nhận quyền quản trị Windows.
@@ -21,7 +21,10 @@ Windows x64, .NET Framework 4.5 trở lên; cần Internet khi tải driver lầ
 
 - Đọc EPC/TID/User/Reserved, chọn anten, lọc EPC/TID, chống trùng, RSSI, Start/Stop.
 - Ghi EPC/User và chuyển lệnh ghi 6C theo vùng nhớ, bộ lọc và mật khẩu; mỗi lệnh 1–64 word. Khả năng ghi phụ thuộc bộ nhớ và trạng thái khóa của thẻ.
-- Cài công suất chung cho các anten; chưa hỗ trợ công suất riêng từng anten.
+- Set/Get công suất riêng từng anten; sửa một anten giữ nguyên các anten còn lại.
+- Set/Get band, kênh cố định/dải kênh liên tiếp; quy đổi đúng tần số giữa Nation và ZK.
+- EPC speed dùng preset Ex10 tương ứng; một số thông số RF khác Nation. Xem [bảng quy đổi](docs/RADIO_MAPPING.md).
+- Q/Session/SearchType và lọc tag giữ qua reconnect; tùy chọn lưu dùng file trạng thái trên máy bridge.
 
 Chưa hỗ trợ đầy đủ các chức năng Nation như SuperRW, Lock/Kill, GPIO, BlockWrite, firmware và các giao thức thẻ khác. Chi tiết kiểm chứng trong [VALIDATION.md](docs/VALIDATION.md).
 
@@ -58,6 +61,7 @@ Thông tin thư viện và giấy phép: [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NO
 | [ARCHITECTURE.md](docs/ARCHITECTURE.md) | Luồng dữ liệu, thành phần source, giao thức và cấu hình |
 | [DEVELOPMENT.md](docs/DEVELOPMENT.md) | Build, test, chạy mô phỏng, đóng gói và phát hành |
 | [VALIDATION.md](docs/VALIDATION.md) | Phạm vi đã kiểm chứng trên mô phỏng và phần cứng |
+| [RADIO_MAPPING.md](docs/RADIO_MAPPING.md) | Bảng tần số/profile, persistence và giới hạn firmware |
 | [KNOWN_ISSUES.md](docs/KNOWN_ISSUES.md) | Lỗi còn mở và giới hạn tương thích |
 | [CHANGELOG.md](CHANGELOG.md) | Thông tin bản phát hành |
 

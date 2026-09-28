@@ -5,13 +5,15 @@ $testDir = Join-Path $root 'test-results'
 $bridge = Join-Path $root 'payload\bin\x64\NationZkBridge.exe'
 Copy-Item -LiteralPath $bridge -Destination $testDir
 Copy-Item -LiteralPath (Join-Path $root 'bridge-tests\vendor\GReaderApi.dll') -Destination $testDir
-foreach ($test in @('ProtocolTests','SdkIntegration')) {
-    $reference = if ($test -eq 'ProtocolTests') { 'NationZkBridge.exe' } else { 'GReaderApi.dll' }
+foreach ($test in @('ProtocolTests','RadioTests','SdkIntegration','RadioSdk')) {
+    $reference = if ($test -in @('SdkIntegration','RadioSdk')) { 'GReaderApi.dll' } else { 'NationZkBridge.exe' }
     & $compiler /nologo /platform:x64 "/out:$testDir\$test.exe" "/r:$testDir\$reference" (Join-Path $root "bridge-tests\$test.cs")
     if ($LASTEXITCODE -ne 0) { throw 'Test compile failed' }
 }
 & (Join-Path $testDir 'ProtocolTests.exe') | Tee-Object -FilePath (Join-Path $testDir 'protocol-tests.txt')
 if ($LASTEXITCODE -ne 0) { throw 'Protocol tests failed' }
+& (Join-Path $testDir 'RadioTests.exe') | Tee-Object -FilePath (Join-Path $testDir 'radio-tests.txt')
+if ($LASTEXITCODE -ne 0) { throw 'Radio tests failed' }
 & $compiler /nologo /platform:x64 "/out:$testDir\WriteTests.exe" "/r:$testDir\NationZkBridge.exe" "/r:$testDir\GReaderApi.dll" (Join-Path $root 'bridge-tests\WriteTests.cs')
 if ($LASTEXITCODE -ne 0) { throw 'Write test compile failed' }
 & (Join-Path $testDir 'WriteTests.exe') | Tee-Object -FilePath (Join-Path $testDir 'write-tests.txt')
@@ -25,6 +27,8 @@ try {
     if ($LASTEXITCODE -ne 0) { throw 'SDK tests failed' }
     & (Join-Path $root 'payload\diagnostics\NationSerialCheck.exe') '--test-tcp' '127.0.0.1:18162' | Tee-Object -FilePath (Join-Path $testDir 'diagnostic-test.txt')
     if ($LASTEXITCODE -ne 0) { throw 'Diagnostic helper failed' }
+    & (Join-Path $testDir 'RadioSdk.exe') '127.0.0.1:18162' | Tee-Object -FilePath (Join-Path $testDir 'radio-sdk-tests.txt')
+    if ($LASTEXITCODE -ne 0) { throw 'Radio SDK tests failed' }
     Set-Content -LiteralPath $stopFile -Value 'stop'
     if (-not $process.WaitForExit(5000)) { throw 'Graceful stop failed' }
     if ($process.ExitCode -ne 0) { throw 'Graceful stop did not return success' }

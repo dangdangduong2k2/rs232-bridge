@@ -27,16 +27,20 @@ Bản 4 anten đã đọc RF thành công trên anten 1–2. Anten 3–4 và b�
 
 ## Cài công suất
 
-Có hỗ trợ đọc và đặt công suất qua giao diện Nation. Dừng inventory trước khi đặt. Backend hiện dùng công suất chung cho module:
+Có hỗ trợ đọc và đặt công suất qua giao diện Nation. Dừng inventory trước khi đặt. Từ 0.5 RC, backend dùng vector công suất từng anten:
 
-- Module 4 anten: gửi đủ ANT1–ANT4 và đặt cùng một giá trị cho cả bốn.
+- Module 4 anten: chọn một hoặc nhiều ANT1–ANT4; mỗi anten có thể đặt mức riêng.
 - Module 1 anten: gửi ANT1.
-- Thiếu anten hoặc đặt mỗi anten một mức khác nhau sẽ bị từ chối.
+- Anten không được chọn giữ nguyên công suất hiện tại. Anten ngoài số cổng cấu hình bị từ chối.
 
 Chỉ chọn trong khoảng capabilities trả về; không tự suy ra giới hạn từ giao diện Nation. Đã xác nhận đổi tạm thời 22 → 21 → 22 dBm và đọc lại đúng. Khả năng lưu qua mất nguồn chưa nghiệm thu.
 
 ## Bộ lọc và cấu hình phiên
 
-Lọc EPC/TID, chống trùng và ngưỡng RSSI có đường xử lý. Chống trùng dùng đơn vị 10 ms trong giao thức. Baseband và tag reporting có lỗi với `IsPersistence=0`; tag reporting báo lưu nhưng không giữ sau reconnect. Xem [KNOWN_ISSUES.md](KNOWN_ISSUES.md) trước khi dựa vào các cấu hình này.
+Lọc EPC/TID, chống trùng và ngưỡng RSSI có đường xử lý. Chống trùng dùng đơn vị 10 ms trong giao thức. Từ 0.5 RC, Baseband và tag reporting nhận `IsPersistence=0`, giữ qua reconnect và có lưu file cho chế độ persistence. Xem [RADIO_MAPPING.md](RADIO_MAPPING.md) về khác biệt giữa lưu trên module và lưu trên máy bridge.
 
 Nếu gặp lỗi, ghi lại thao tác, thời gian, mã lỗi và đọc [TROUBLESHOOTING.md](TROUBLESHOOTING.md).
+
+## Cấu hình RF từ 0.5 RC
+
+Chọn anten cần sửa, chọn công suất rồi Set; Get đọc riêng từng anten. EPC Speed và Frequency Range/F-hop đã có handler. Xem [RADIO_MAPPING.md](RADIO_MAPPING.md) trước khi đối chiếu thông số RF: cùng nhãn preset không có nghĩa Tari/BLF hai hãng giống hoàn toàn.

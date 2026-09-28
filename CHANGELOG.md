@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.5 RC — 2026-09-28
+
+- Set/Get công suất vector qua GetAntennaPower/SetAntennaPower; cho phép sửa riêng một anten.
+- Thêm Set/Get band và working frequency, xử lý offset kênh theo MHz.
+- EPC speed chuyển sang extended profile Ex10; đọc lại độc lập sau Set.
+- Nhận persistence FF00 của baseband/reporting; giữ cấu hình qua reconnect và lưu atomic cho chế độ persistence.
+- Không xóa buffer chứa request đầu tiên của phiên COM mới sau khi đóng backend cũ.
+- Bổ sung kiểm thử giả lập lỗi/readback, DLL Nation gốc và tài liệu bảng quy đổi.
+
+
 ## v0.4.0-rc.1 — 2026-09-28
 
 Bản đầu tiên đóng gói source và EXE để chia sẻ qua GitHub, dựa trên bridge 0.4 đã thử phần cứng ngày 25/09/2026.

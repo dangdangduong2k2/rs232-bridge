@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Drawing;
@@ -93,7 +93,7 @@ namespace NationComPort {
             if(!File.Exists(marker)||File.ReadAllText(marker)!=Owner)throw new IOException("Không xác nhận được thư mục cài đặt do bộ cài này quản lý.");
         }
         public static string Install(string physical,int baud,int antennas){
-            if(!Environment.Is64BitOperatingSystem)throw new NotSupportedException("Bản 0.4 hỗ trợ Windows x64; chưa đóng gói driver Microsoft cho x86.");
+            if(!Environment.Is64BitOperatingSystem)throw new NotSupportedException("Bản 0.5 hỗ trợ Windows x64; chưa đóng gói driver Microsoft cho x86.");
             if((Environment.GetEnvironmentVariable("PROCESSOR_ARCHITECTURE")+Environment.GetEnvironmentVariable("PROCESSOR_ARCHITEW6432")).IndexOf("ARM",StringComparison.OrdinalIgnoreCase)>=0)throw new NotSupportedException("Chưa hỗ trợ Windows ARM.");
             var device=Common.Ports().SingleOrDefault(p=>p.Name==physical);
             if(device==null||device.Id.StartsWith("COM0COM",StringComparison.OrdinalIgnoreCase))throw new IOException("Hãy chọn đúng cổng USB nối module ZK.");
@@ -105,6 +105,10 @@ namespace NationComPort {
             if(File.Exists(Path.Combine(Common.InstallRoot,"pending-pair.txt")))throw new IOException("Lần cài trước bị gián đoạn khi tạo cặp COM. Cần kỹ thuật viên kiểm tra pending-pair.txt và setup.log trước khi thử lại.");
             Settings s=repair?Settings.Load(Common.Config):new Settings{PhysicalPort=physical,PhysicalId=device.Id,Baud=baud,Antennas=antennas};
             if(repair&&(s.PhysicalId!=device.Id||s.Baud!=baud||s.Antennas!=antennas))throw new IOException("Cấu hình đã cài khác lựa chọn này. Hãy gỡ bản cũ rồi cài lại để đổi thiết bị.");
+            // Fail before stopping the working service or replacing any payload when
+            // Nation still owns the front-end COM. Retrying later leaves it usable.
+            if(repair){try{using(var port=new System.IO.Ports.SerialPort(s.NationPort,115200)){port.Open();}}
+                catch(UnauthorizedAccessException e){throw new IOException("Close Nation / disconnect "+s.NationPort+" before setup. The installed service has not been changed.",e);}}
             Common.SafeDirectory(Common.DataRoot);
             if(!repair&&Directory.Exists(Common.DataRoot)&&!File.Exists(Path.Combine(Common.InstallRoot,"owner.txt")))throw new IOException("Thư mục dữ liệu đã tồn tại nhưng không có dấu cài đặt. Cần kỹ thuật viên kiểm tra trước.");
             Protect(Common.InstallRoot,false);Protect(Common.DataRoot,true);File.WriteAllText(Path.Combine(Common.InstallRoot,"owner.txt"),Owner);
@@ -158,7 +162,7 @@ namespace NationComPort {
                 Thread.Sleep(500);
                 Common.Run(Path.Combine(Common.InstallRoot,"diagnostics","NationSerialCheck.exe"),"--serial "+s.NationPort+":115200",55,Log);
                 using(var k=Registry.LocalMachine.CreateSubKey(@"SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\NationComPort")){
-                    k.SetValue("DisplayName","Nation COM Port (ZK bridge)");k.SetValue("DisplayVersion","0.4 RC");k.SetValue("InstallLocation",Common.InstallRoot);k.SetValue("UninstallString",Common.Quote(target)+" /uninstall");k.SetValue("NoModify",1);k.SetValue("NoRepair",1);
+                    k.SetValue("DisplayName","Nation COM Port (ZK bridge)");k.SetValue("DisplayVersion","0.5 RC");k.SetValue("InstallLocation",Common.InstallRoot);k.SetValue("UninstallString",Common.Quote(target)+" /uninstall");k.SetValue("NoModify",1);k.SetValue("NoRepair",1);
                 }
                 string pending=Path.Combine(Common.InstallRoot,"pending-pair.txt");if(File.Exists(pending))File.Delete(pending);
                 Log("PASS: original Nation protocol returned real reader firmware through "+s.NationPort);

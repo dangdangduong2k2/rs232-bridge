@@ -12,12 +12,13 @@ namespace NationZkBridge {
         static string stopFile;
         static bool Stopping { get { return shutdown || (stopFile != null && File.Exists(stopFile)); } }
         static StreamWriter logfile;
+        static BridgeState bridgeState;
         static readonly object logLock=new object();
         static void Log(string s){lock(logLock){string line=DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss.fff")+" "+s;Console.WriteLine(line);if(logfile!=null){logfile.WriteLine(line);logfile.Flush();}}}
         static Dictionary<string,string> ReadArgs(string[] args) {
             var r=new Dictionary<string,string>(StringComparer.OrdinalIgnoreCase);
             for(int i=0;i<args.Length;i++){if(args[i]=="--help"){r["help"]="true";continue;}if(args[i]=="--simulate"){r["simulate"]="true";continue;}if(!args[i].StartsWith("--")||i+1>=args.Length)throw new ArgumentException("Arguments are --name value");string key=args[i].Substring(2);if(r.ContainsKey(key))throw new ArgumentException("Duplicate argument "+key);r.Add(key,args[++i]);}
-            foreach(string k in r.Keys)if(Array.IndexOf(new[]{"help","simulate","nation-com","nation-baud","listen","zk-com","zk-baud","antennas","max-power","log","stop-file","watch-peer"},k)<0)throw new ArgumentException("Unknown argument "+k);
+            foreach(string k in r.Keys)if(Array.IndexOf(new[]{"help","simulate","nation-com","nation-baud","listen","zk-com","zk-baud","antennas","max-power","log","stop-file","watch-peer","state-file"},k)<0)throw new ArgumentException("Unknown argument "+k);
             return r;
         }
         static string Get(Dictionary<string,string> a,string k,string d){string v;return a.TryGetValue(k,out v)?v:d;}
@@ -26,8 +27,9 @@ namespace NationZkBridge {
             try {
                 var a=ReadArgs(args);
                 stopFile=Get(a,"stop-file",null);
-                if(a.Count==0||a.ContainsKey("help")){Console.WriteLine("NationZkBridge 0.1 - keep Nation software and SDK unchanged\n\nHardware: NationZkBridge.exe --zk-com COM5 --zk-baud 115200 --antennas 4 --nation-com COM11\nTCP front end (ZK still COM): --zk-com COM5 --antennas 4 --listen 18160\nSimulation only: --simulate --antennas 4 --listen 18160\nOptional: --nation-baud 115200 --max-power 30 --log bridge.log\nCOM11 must be one side of an existing virtual null-modem pair. Select its OTHER side in Nation.\nTCP listens only on 127.0.0.1. No automatic physical COM probing. Ctrl+C stops.");return 0;}
+                if(a.Count==0||a.ContainsKey("help")){Console.WriteLine("NationZkBridge 0.5 RC - keep Nation software and SDK unchanged\n\nHardware: NationZkBridge.exe --zk-com COM5 --zk-baud 115200 --antennas 4 --nation-com COM11\nTCP front end (ZK still COM): --zk-com COM5 --antennas 4 --listen 18160\nSimulation only: --simulate --antennas 4 --listen 18160\nOptional: --nation-baud 115200 --max-power 30 --log bridge.log --state-file radio-state.xml\nCOM11 must be one side of an existing virtual null-modem pair. Select its OTHER side in Nation.\nTCP listens only on 127.0.0.1. No automatic physical COM probing. Ctrl+C stops.");return 0;}
                 bool sim=a.ContainsKey("simulate");string port=Get(a,"zk-com",null),nationPort=Get(a,"nation-com",null);
+                bridgeState=new BridgeState(Get(a,"state-file",null));
                 bool watchPeer=Get(a,"watch-peer","no")=="yes";
                 if(a.ContainsKey("watch-peer")&&(nationPort==null||!watchPeer))throw new ArgumentException("--watch-peer yes requires --nation-com with DSR wired to remote-open");
                 int baud=int.Parse(Get(a,"zk-baud","115200")),hostBaud=int.Parse(Get(a,"nation-baud","115200"));
@@ -51,7 +53,8 @@ namespace NationZkBridge {
                             // Serve owns the backend; dropping peer-open cancels inventory and releases ZK.
                             Serve(delegate(byte[] b){if(watchPeer&&!serial.DsrHolding)return 0;return serial.Read(b,0,b.Length);},delegate(byte[] b){if(watchPeer&&!serial.DsrHolding)throw new IOException("Nation port closed");serial.Write(b,0,b.Length);},reader,hostBaud);
                             if(!watchPeer)break;
-                            serial.DiscardInBuffer();serial.DiscardOutBuffer();
+                            // Do not discard here: a fast reconnect may already have queued
+                            // its first request while the previous native handle was closing.
                         }while(!Stopping);
                     }
                 } else {
@@ -67,7 +70,7 @@ namespace NationZkBridge {
         static bool IsReadTimeout(IOException ex){var socket=ex.InnerException as SocketException;return socket!=null&&socket.SocketErrorCode==SocketError.TimedOut;}
         static void Serve(Func<byte[],int> read,Action<byte[]> write,IReader reader,int hostBaud) {
             var parser=new FrameParser();var writeLock=new object();var buf=new byte[4096];
-            using(var bridge=new Bridge(reader,delegate(Frame f){byte[] bytes=f.Encode();lock(writeLock){write(bytes);}if(f.Key!=0x200||(f.Control&0x1000)==0)Log("TX "+f.Control.ToString("X8")+" "+BitConverter.ToString(f.Data));},Log,hostBaud)) {
+            using(var bridge=new Bridge(reader,delegate(Frame f){byte[] bytes=f.Encode();lock(writeLock){write(bytes);}if(f.Key!=0x200||(f.Control&0x1000)==0)Log("TX "+f.Control.ToString("X8")+" "+BitConverter.ToString(f.Data));},Log,hostBaud,bridgeState)) {
                 try {while(!Stopping){int n;try{n=read(buf);}catch(TimeoutException){parser.Expire();continue;}catch(IOException ex){if(IsReadTimeout(ex)){parser.Expire();continue;}throw;}if(n==0)break;foreach(var f in parser.Feed(buf,n))bridge.Handle(f);}}
                 catch(IOException ex){Log("Session disconnected: "+ex.Message);}
             }

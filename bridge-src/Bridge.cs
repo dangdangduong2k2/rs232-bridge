@@ -10,10 +10,13 @@ namespace NationZkBridge {
         readonly DateTime started=DateTime.UtcNow;
         Thread inventoryThread;CancellationTokenSource cancellation;
         volatile bool disposed;
-        byte q=4,session=0,target=2;
-        ushort duplicateUnits;byte rssiThreshold;
+        readonly BridgeState state;
+        byte q {get{return state.Active.Q;}} byte session {get{return state.Active.Session;}} byte target {get{return state.Active.Target;}}
+        ushort duplicateUnits {get{return state.Active.Duplicate;}} byte rssiThreshold {get{return state.Active.Rssi;}}
+        IRadioReader Radio {get{var r=reader as IRadioReader;if(r==null)throw new NotSupportedException("Radio configuration unavailable");return r;}}
         readonly int hostBaud;
-        public Bridge(IReader r,Action<Frame> output,Action<string> logger,int baud){reader=r;send=output;log=logger;hostBaud=baud;}
+        public Bridge(IReader r,Action<Frame> output,Action<string> logger,int baud):this(r,output,logger,baud,new BridgeState()){}
+        public Bridge(IReader r,Action<Frame> output,Action<string> logger,int baud,BridgeState settings){reader=r;send=output;log=logger;hostBaud=baud;state=settings;}
         bool Running {get{return inventoryThread!=null&&inventoryThread.IsAlive;}}
         void Reply(Frame f,byte[] data){var response=new Frame(f.Control,data);response.Address=f.Address;send(response);}
         void ReplyCode(Frame f,byte code){Reply(f,new byte[]{code});}
@@ -34,7 +37,7 @@ namespace NationZkBridge {
                     case 0x100:
                         Empty(f);
                         var b=new Bytes().Text(reader.Info.Identity).U32((uint)(DateTime.UtcNow-started).TotalSeconds).Text("Nation-ZK bridge");
-                        b.U8(1).U32(0x00010000).U8(2).Text("ZK compatibility bridge 0.4");Reply(f,b.ToArray());break;
+                        b.U8(1).U32(0x00010000).U8(2).Text("ZK compatibility bridge 0.5 RC");Reply(f,b.ToArray());break;
                     case 0x101:
                         Empty(f);Reply(f,new byte[]{0,reader.Info.Version[0],reader.Info.Version[1],0});break;
                     case 0x103:
@@ -45,13 +48,16 @@ namespace NationZkBridge {
                         Empty(f);var i=reader.Info;
                         Reply(f,new Bytes().U8(i.MinPower).U8(i.MaxPower).U8(i.Antennas).Var(i.NationRegions).Var(new byte[]{0}).ToArray());break;
                     case 0x202:
-                        Empty(f);byte power;lock(deviceLock){power=reader.ReadPower();}
-                        var powers=new Bytes();for(byte a=1;a<=reader.Info.Antennas;a++)powers.U8(a).U8(power);Reply(f,powers.ToArray());break;
+                        Empty(f);byte[] vector;lock(deviceLock){vector=Radio.ReadPowers();}
+                        var powers=new Bytes();for(byte a=1;a<=vector.Length;a++)powers.U8(a).U8(vector[a-1]);Reply(f,powers.ToArray());break;
                     case 0x201:SetPower(f);break;
+                    case 0x203:SetRegion(f);break;
                     case 0x204:
-                        Empty(f);if(reader.Info.NationRegions.Length!=1){Error(f,9);break;}Reply(f,reader.Info.NationRegions);break;
+                        Empty(f);lock(deviceLock){Reply(f,new byte[]{CurrentRegion().Nation});}break;
+                    case 0x205:SetFrequency(f);break;
+                    case 0x206:GetFrequency(f);break;
                     case 0x20c:
-                        Empty(f);Reply(f,new byte[]{255,q,session,target});break;
+                        Empty(f);lock(deviceLock){int actual=Radio.ReadProfile();byte speed=ProfileMap.FromZk(actual,state.Active.NationSpeed);Reply(f,new byte[]{speed,q,session,target});}break;
                     case 0x20b:SetBaseband(f);break;
                     case 0x20a:
                         Empty(f);Reply(f,new Bytes().U16(duplicateUnits).U8(rssiThreshold).ToArray());break;
@@ -75,29 +81,56 @@ namespace NationZkBridge {
             } catch(NotSupportedException ex){log(ex.Message);Error(f,3);}
               catch(InvalidDataException ex){log(ex.Message);Error(f,7);}
               catch(ZkException ex){log(ex.Message);Error(f,9);}
+              catch(IOException ex){log(ex.Message);Error(f,9);}
         }
         static int NationBaud(int baud){switch(baud){case 9600:return 0;case 19200:return 1;case 115200:return 2;case 230400:return 3;case 460800:return 4;default:return -1;}}
         void SetPower(Frame f) {
             if(Running){Error(f,5);return;}
             var c=new Cursor(f.Data);var ports=new Dictionary<byte,byte>();bool persist=true;bool hasPersistence=false;
             while(c.Left>0){byte a=c.U8(),p=c.U8();if(a==255){if(hasPersistence||p>1)throw new InvalidDataException("Power persistence");persist=p==1;hasPersistence=true;continue;}if(a<1||a>reader.Info.Antennas||ports.ContainsKey(a)){ReplyCode(f,1);return;}if(p<reader.Info.MinPower||p>reader.Info.MaxPower){ReplyCode(f,2);return;}ports.Add(a,p);}
-            // ZK SetRfPower is global. Never silently change unrequested antennas.
-            if(ports.Count!=reader.Info.Antennas){ReplyCode(f,1);return;}
-            byte value=ports[1];foreach(byte p in ports.Values)if(p!=value){ReplyCode(f,2);return;}
-            try{lock(deviceLock){reader.SetPower(value,persist);}ReplyCode(f,0);}
+            if(ports.Count==0){ReplyCode(f,1);return;}
+            try{lock(deviceLock){var values=Radio.ReadPowers();byte selected=0;foreach(var entry in ports){values[entry.Key-1]=entry.Value;selected|=(byte)(1<<(entry.Key-1));}Radio.SetPowers(values,persist,selected);}ReplyCode(f,0);}
             catch(IOException ex){log(ex.Message);ReplyCode(f,3);}
+        }
+        RegionMap CurrentRegion(){return RegionMap.Resolve(Radio.ReadRegion(),state.Active.NationRegion);}
+        void RememberRegion(RegionMap map,RadioRegion actual,int auto,bool persist){state.Commit(delegate(StateData d){d.NationRegion=map.Nation;d.RegionBand=actual.Band;d.RegionMin=actual.Min;d.RegionMax=actual.Max;d.FrequencyAuto=auto;},persist);}
+        void SetRegion(Frame f){
+            if(Running){Error(f,5);return;}var c=new Cursor(f.Data);byte band=c.U8();bool persist=true;
+            if(c.Left>0){if(c.U8()!=1)throw new InvalidDataException("Band persistence PID");byte v=c.U8();if(v>1)throw new InvalidDataException("Band persistence");persist=v==1;}c.End();
+            RegionMap map;try{map=RegionMap.Find(band);}catch(NotSupportedException ex){log(ex.Message);ReplyCode(f,1);return;}
+            try{lock(deviceLock){var value=map.Full();Radio.SetRegion(value,persist);RememberRegion(map,value,1,persist);}ReplyCode(f,0);}catch(IOException ex){log(ex.Message);ReplyCode(f,2);}
+        }
+        void SetFrequency(Frame f){
+            if(Running){Error(f,5);return;}var c=new Cursor(f.Data);byte auto=c.U8();if(auto>1){ReplyCode(f,3);return;}bool persist=true;byte[] channels=null;var seen=new HashSet<byte>();
+            while(c.Left>0){byte pid=c.U8();if(!seen.Add(pid))throw new InvalidDataException("Duplicate frequency option");switch(pid){case 1:channels=c.Var();break;case 2:byte v=c.U8();if(v>1)throw new InvalidDataException("Frequency persistence");persist=v==1;break;default:throw new NotSupportedException("Frequency parameter "+pid);}}
+            if(auto==0&&(channels==null||channels.Length==0||channels.Length>50)){ReplyCode(f,2);return;}
+            try{lock(deviceLock){var map=CurrentRegion();RadioRegion value;try{value=auto==1?map.Full():map.Select(channels);}catch(ArgumentException ex){log(ex.Message);ReplyCode(f,1);return;}Radio.SetRegion(value,persist);RememberRegion(map,value,auto,persist);}ReplyCode(f,0);}catch(IOException ex){log(ex.Message);ReplyCode(f,4);}
+        }
+        void GetFrequency(Frame f){
+            Empty(f);lock(deviceLock){var actual=Radio.ReadRegion();var map=RegionMap.Resolve(actual,state.Active.NationRegion);var d=state.Active;
+                bool matching=d.NationRegion==map.Nation&&d.RegionBand==actual.Band&&d.RegionMin==actual.Min&&d.RegionMax==actual.Max&&d.FrequencyAuto>=0;
+                byte auto=(byte)(matching?d.FrequencyAuto:(actual.Same(map.Full())?1:0));Reply(f,new Bytes().U8(auto).Var(map.Channels(actual)).ToArray());}
         }
         void SetBaseband(Frame f) {
             if(Running){Error(f,5);return;}
-            var c=new Cursor(f.Data);byte nq=q,ns=session,nt=target;var seen=new HashSet<byte>();
-            while(c.Left>0){byte p=c.U8(),v=c.U8();if(!seen.Add(p))throw new InvalidDataException("Duplicate baseband option");switch(p){case 1:if(v!=255){ReplyCode(f,1);return;}break;case 2:if(v>15){ReplyCode(f,2);return;}nq=v;break;case 3:if(v>3){ReplyCode(f,3);return;}ns=v;break;case 4:if(v>2){ReplyCode(f,4);return;}nt=v;break;default:throw new NotSupportedException("Baseband parameter "+p);}}
-            q=nq;session=ns;target=nt;ReplyCode(f,0);
+            var c=new Cursor(f.Data);byte nq=q,ns=session,nt=target;int speed=-1;bool persist=true;var seen=new HashSet<byte>();
+            while(c.Left>0){byte p=c.U8(),v=c.U8();if(!seen.Add(p))throw new InvalidDataException("Duplicate baseband option");switch(p){
+                case 1:try{ProfileMap.ToZk(v);}catch(NotSupportedException ex){log(ex.Message);ReplyCode(f,1);return;}speed=v;break;
+                case 2:if(v>15){ReplyCode(f,2);return;}nq=v;break;
+                case 3:if(v>3){ReplyCode(f,3);return;}ns=v;break;
+                case 4:if(v>2){ReplyCode(f,4);return;}nt=v;break;
+                case 255:if(v>1)throw new InvalidDataException("Baseband persistence");persist=v==1;break;
+                default:throw new NotSupportedException("Baseband parameter "+p);
+            }}
+            try{lock(deviceLock){int zk=-1;if(speed>=0){zk=ProfileMap.ToZk((byte)speed);Radio.SetProfile(zk,persist);log("Nation EPC speed "+speed+" -> ZK profile "+zk+"; compatibility preset, see RADIO_MAPPING.md");}
+                state.Commit(delegate(StateData d){if(seen.Contains(2))d.Q=nq;if(seen.Contains(3))d.Session=ns;if(seen.Contains(4))d.Target=nt;if(speed>=0){d.NationSpeed=speed;d.ZkProfile=zk;}},persist);}ReplyCode(f,0);
+            }catch(IOException ex){log(ex.Message);ReplyCode(f,6);}
         }
         void SetReporting(Frame f) {
             if(Running){Error(f,5);return;}
-            var c=new Cursor(f.Data);ushort nd=duplicateUnits;byte nr=rssiThreshold;var seen=new HashSet<byte>();
-            while(c.Left>0){byte p=c.U8();if(!seen.Add(p))throw new InvalidDataException("Duplicate report option");switch(p){case 1:nd=c.U16();break;case 2:nr=c.U8();break;default:throw new NotSupportedException("Reporting parameter "+p);}}
-            duplicateUnits=nd;rssiThreshold=nr;ReplyCode(f,0);
+            var c=new Cursor(f.Data);ushort nd=duplicateUnits;byte nr=rssiThreshold;bool persist=true;var seen=new HashSet<byte>();
+            while(c.Left>0){byte p=c.U8();if(!seen.Add(p))throw new InvalidDataException("Duplicate report option");switch(p){case 1:nd=c.U16();break;case 2:nr=c.U8();break;case 255:byte v=c.U8();if(v>1)throw new InvalidDataException("Reporting persistence");persist=v==1;break;default:throw new NotSupportedException("Reporting parameter "+p);}}
+            try{state.Commit(delegate(StateData d){if(seen.Contains(1))d.Duplicate=nd;if(seen.Contains(2))d.Rssi=nr;},persist);ReplyCode(f,0);}catch(IOException ex){log(ex.Message);ReplyCode(f,2);}
         }
         void Start(Frame origin,Inventory request) {
             Stop(); // Dispose a completed worker before the next inventory.

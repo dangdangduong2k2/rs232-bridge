@@ -18,7 +18,10 @@ class SdkIntegration {
             var power=new MsgBaseGetPower();Send(c,power);Assert(power.DicPower.Count==4&&power.DicPower[1]==20,"Power decoded");
             var set=new MsgBaseSetPower();set.DicPower=new Dictionary<byte,byte>{{1,22},{2,22},{3,22},{4,22}};set.IsPersistence=0;Send(c,set);
             power=new MsgBaseGetPower();Send(c,power);Assert(power.DicPower[4]==22,"Power set/read roundtrip");
-            set=new MsgBaseSetPower();set.DicPower=new Dictionary<byte,byte>{{1,21},{2,22},{3,22},{4,22}};c.SendSynMsg(set,2000);Assert(set.RtCode!=0,"Unequal antenna power rejected");
+            set=new MsgBaseSetPower();set.DicPower=new Dictionary<byte,byte>{{1,21},{2,22},{3,23},{4,24}};set.IsPersistence=0;Send(c,set);
+            power=new MsgBaseGetPower();Send(c,power);Assert(power.DicPower[1]==21&&power.DicPower[4]==24,"Unequal antenna power read back");
+            set=new MsgBaseSetPower();set.DicPower=new Dictionary<byte,byte>{{2,18}};set.IsPersistence=0;Send(c,set);
+            power=new MsgBaseGetPower();Send(c,power);Assert(power.DicPower[1]==21&&power.DicPower[2]==18&&power.DicPower[3]==23&&power.DicPower[4]==24,"Single antenna update preserves other antennas");
             var tags=new List<LogBaseEpcInfo>();var ended=new ManualResetEvent(false);var sync=new object();
             c.OnEncapedTagEpcLog+=delegate(EncapedLogBaseEpcInfo e){lock(sync){tags.Add(e.logBaseEpcInfo);}};
             c.OnEncapedTagEpcOver+=delegate(EncapedLogBaseEpcOver e){ended.Set();};

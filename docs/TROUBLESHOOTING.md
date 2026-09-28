@@ -31,7 +31,7 @@ File chỉ có sau khi thành phần tương ứng đã chạy. `status.txt` bá
 | Kết nối được nhưng không đọc thẻ | Kiểm tra 6C, anten được chọn, cáp antenna, thẻ, vùng đọc, công suất và bộ lọc. |
 | Ghi vùng nào cũng lỗi | Stop inventory; dùng Write 6C thay vì SuperRW; kiểm tra chọn thẻ, anten, password, word address/length và dữ liệu hex. Xem log `UNSUPPORTED` hoặc lỗi backend. |
 | Đặt công suất lỗi | Gửi đủ các anten của module với cùng công suất trong khoảng cho phép, sau khi Stop. |
-| Baseband/tag reporting lỗi hoặc mất sau reconnect | Đây là lỗi đã biết của 0.4 RC; xem [danh sách lỗi](KNOWN_ISSUES.md). |
+| Baseband/tag reporting lỗi hoặc mất sau reconnect | Kiểm tra đã nâng cả worker/dịch vụ lên 0.5 RC; kiểm tra quyền ghi radio-state.xml. Các lỗi này có trong 0.4. |
 
 ## Kiểm tra đường truyền bằng DLL Nation gốc
 

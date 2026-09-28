@@ -56,9 +56,16 @@ namespace NationZkBridge {
         void SetPower(byte power,bool persist);
         List<Tag> Scan(byte antenna,Inventory request,byte q,byte session,byte target,CancellationToken stop);
     }
-    public sealed class SimReader : IReader {
+    public sealed class SimReader : IReader,IRadioReader {
         readonly ReaderInfo info;
-        public SimReader(byte antennas){info=new ReaderInfo{Identity="SIMULATED-ZK-BRIDGE",Antennas=antennas,MinPower=0,MaxPower=30,Power=20,Version=new byte[]{0,1}};}
+        byte[] powers;RadioRegion region=new RadioRegion(2,0,49);int profile=146;
+        public SimReader(byte antennas){info=new ReaderInfo{Identity="SIMULATED-ZK-BRIDGE",Antennas=antennas,MinPower=0,MaxPower=30,Power=20,Version=new byte[]{0,1},NationRegions=RegionMap.Supported()};powers=new byte[antennas];for(int i=0;i<antennas;i++)powers[i]=20;}
+        public byte[] ReadPowers(){return (byte[])powers.Clone();}
+        public void SetPowers(byte[] values,bool persist,byte selectedMask=255){powers=(byte[])values.Clone();info.Power=powers[0];}
+        public RadioRegion ReadRegion(){return new RadioRegion(region.Band,region.Min,region.Max);}
+        public void SetRegion(RadioRegion value,bool persist){region=new RadioRegion(value.Band,value.Min,value.Max);}
+        public int ReadProfile(){return profile;}
+        public void SetProfile(int value,bool persist){profile=value;}
         public ReaderInfo Info {get{return info;}}
         public byte ReadPower(){return info.Power;}
         public void SetPower(byte p,bool persist){info.Power=p;}

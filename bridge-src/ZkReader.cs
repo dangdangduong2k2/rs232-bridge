@@ -11,6 +11,11 @@ namespace NationZkBridge {
         [DllImport(Dll,CallingConvention=CallingConvention.StdCall)] internal static extern int CloseSpecComPort(int handle);
         [DllImport(Dll,CallingConvention=CallingConvention.StdCall)] internal static extern int GetReaderInformation(ref byte address,[Out] byte[] version,ref byte type,ref byte protocols,ref byte maxFreq,ref byte minFreq,ref byte power,ref byte scan,ref byte ant,ref byte beep,ref byte output,ref byte check,int handle);
         [DllImport(Dll,CallingConvention=CallingConvention.StdCall)] internal static extern int SetRfPower(ref byte address,byte power,int handle);
+        [DllImport(Dll,CallingConvention=CallingConvention.StdCall)] internal static extern int GetAntennaPower(ref byte address,[Out] byte[] powers,ref int length,int handle);
+        [DllImport(Dll,CallingConvention=CallingConvention.StdCall)] internal static extern int SetAntennaPower(ref byte address,byte[] powers,int length,int handle);
+        [DllImport(Dll,CallingConvention=CallingConvention.StdCall)] internal static extern int ExtGetRegion(ref byte address,ref byte band,ref byte max,ref byte min,int handle);
+        [DllImport(Dll,CallingConvention=CallingConvention.StdCall)] internal static extern int ExtSetRegion(ref byte address,byte flag,byte band,byte max,byte min,int handle);
+        [DllImport(Dll,CallingConvention=CallingConvention.StdCall)] internal static extern int SetExtProfile(ref byte address,byte option,ref int profile,int handle);
         [DllImport(Dll,CallingConvention=CallingConvention.StdCall)] internal static extern int SetAntennaMultiplexing(ref byte address,byte mask,int handle);
         [DllImport(Dll,CallingConvention=CallingConvention.StdCall)] internal static extern int WriteData_G2(ref byte address,byte[] epc,byte words,byte epcWords,byte memory,byte wordPointer,byte[] data,byte[] password,byte maskMem,byte[] maskAdr,byte maskLen,byte[] maskData,ref int tagError,int handle);
         [DllImport(Dll,CallingConvention=CallingConvention.StdCall)] internal static extern int ExtWriteData_G2(ref byte address,byte[] epc,byte words,byte epcWords,byte memory,byte[] wordPointer,byte[] data,byte[] password,byte maskMem,byte[] maskAdr,byte maskLen,byte[] maskData,ref int tagError,int handle);
@@ -21,7 +26,7 @@ namespace NationZkBridge {
         public readonly int Code;
         public ZkException(string operation,int code):base(operation+" returned ZK 0x"+code.ToString("X2")){Code=code;}
     }
-    public sealed class ZkReader : IReader,ITagWriter,IWriteTransport {
+    public sealed class ZkReader : IReader,ITagWriter,IWriteTransport,IRadioReader {
         byte address=255;int handle=-1;readonly ReaderInfo info;
         readonly Action<string> log;
         public static byte BaudCode(int baud) {
@@ -37,7 +42,7 @@ namespace NationZkBridge {
                 info=new ReaderInfo{Identity="ZK-"+port+"-TYPE"+type.ToString("X2"),Version=version,Antennas=antennas,MinPower=0,MaxPower=maxPower,Power=power};
                 int band=((max&0xc0)>>4)|((min&0xc0)>>6);
                 // Only documented matching band families; do not change regional RF settings.
-                switch(band){case 1:info.NationRegions=new byte[]{0};break;case 2:info.NationRegions=new byte[]{3};break;case 4:info.NationRegions=new byte[]{4};break;case 8:info.NationRegions=new byte[]{1};break;}
+                info.NationRegions=RegionMap.Supported();
                 log("ZK connected: "+info.Identity+", firmware "+version[0]+"."+version[1]+", configured antennas="+antennas+", power="+power+", band="+band);
             } catch {Dispose();throw;}
         }
@@ -65,6 +70,27 @@ namespace NationZkBridge {
             info.Power=power;return power;
         }
         public void SetPower(byte power,bool persist){Check("SetRfPower",Native.SetRfPower(ref address,(byte)(power|(persist?0:0x80)),handle));info.Power=ReadPower();if(info.Power!=power)throw new IOException("ZK power readback mismatch");}
+        public byte[] ReadPowers(){
+            var buffer=new byte[256];int length=buffer.Length;Check("GetAntennaPower",Native.GetAntennaPower(ref address,buffer,ref length,handle));
+            if(length!=info.Antennas)throw new InvalidDataException("Physical power vector does not match configured antenna count");
+            var result=new byte[length];Array.Copy(buffer,result,length);foreach(byte p in result)if(p>info.MaxPower)throw new InvalidDataException("Power out of configured range");return result;
+        }
+        public void SetPowers(byte[] values,bool persist,byte selectedMask=255){
+            if(values.Length!=info.Antennas)throw new ArgumentException("Power vector length");foreach(byte p in values)if(p>info.MaxPower)throw new ArgumentException("Power out of range");
+            ReadPowers();var wire=(byte[])values.Clone();for(int i=0;i<wire.Length;i++)wire[i]|=(byte)(persist&&(selectedMask&(1<<i))!=0?0:128);
+            Check("SetAntennaPower",Native.SetAntennaPower(ref address,wire,wire.Length,handle));var actual=ReadPowers();
+            for(int i=0;i<actual.Length;i++)if(actual[i]!=values[i])throw new IOException("Antenna power readback mismatch; hardware may have changed");
+        }
+        public RadioRegion ReadRegion(){byte b=0,max=0,min=0;Check("ExtGetRegion",Native.ExtGetRegion(ref address,ref b,ref max,ref min,handle));if(min>max)throw new InvalidDataException("Invalid ZK region response");return new RadioRegion(b,min,max);}
+        public void SetRegion(RadioRegion value,bool persist){
+            if(value.Min>value.Max)throw new ArgumentException("Region range");ReadRegion();Check("ExtSetRegion",Native.ExtSetRegion(ref address,(byte)(persist?0:1),value.Band,value.Max,value.Min,handle));
+            if(!ReadRegion().Same(value))throw new IOException("Region readback mismatch; hardware may have changed");
+        }
+        public int ReadProfile(){int p=0;Check("Get extended profile",Native.SetExtProfile(ref address,0,ref p,handle));if(p<0||p>65535)throw new InvalidDataException("Invalid extended profile");return p;}
+        public void SetProfile(int value,bool persist){
+            if(value<0||value>65535)throw new ArgumentException("Profile ID");ReadProfile();int p=value;Check("Set extended profile",Native.SetExtProfile(ref address,(byte)(persist?1:2),ref p,handle));
+            if(ReadProfile()!=value)throw new IOException("Profile readback mismatch; hardware may have changed");
+        }
         // Documented synchronous buffer: length, EPC, RSSI; phase extension only when bit6 is set.
         public static List<Tag> ParseInventory(byte[] data,int total,int count,byte antenna) {
             if(total<0||total>data.Length||count<0||count>total/4)throw new InvalidDataException("Invalid ZK inventory bounds");
