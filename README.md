@@ -8,6 +8,8 @@ Bộ chuyển giao thức để phần mềm Nation dùng `GReaderApi.dll` kết
 
 **[Tải EXE](https://github.com/dangdangduong2k2/rs232-bridge/releases/download/v0.5.0-rc.3/RS232-Bridge-Setup.exe)** · [Trang phát hành](https://github.com/dangdangduong2k2/rs232-bridge/releases/tag/v0.5.0-rc.3)
 
+Lập trình ứng dụng mới trên Windows/macOS/Linux: dùng **[ZK Reader API — Python SDK + HTTP, source và OpenAPI](https://github.com/dangdangduong2k2/zk-reader-api)**, reader cắm trực tiếp vào máy chạy API.
+
 1. Cắm module ZK, đóng phần mềm đang dùng cổng COM.
 2. Chạy `RS232-Bridge-Setup.exe`, bấm **setup**, xác nhận quyền quản trị Windows.
 3. Máy mới chọn COM vật lý, baud và 1/4 anten một lần. Máy đã cài dùng cấu hình lưu sẵn.
@@ -24,7 +26,8 @@ Windows x64, .NET Framework 4.5 trở lên; cần Internet khi tải driver lầ
 - Set/Get công suất riêng từng anten; sửa một anten giữ nguyên các anten còn lại.
 - Set/Get band, kênh cố định/dải kênh liên tiếp; quy đổi đúng tần số giữa Nation và ZK.
 - EPC speed dùng preset Ex10 tương ứng; một số thông số RF khác Nation. Xem [bảng quy đổi](docs/RADIO_MAPPING.md).
-- Q/Session/SearchType và lọc tag giữ qua reconnect; tùy chọn lưu dùng file trạng thái trên máy bridge.
+- Q/Session đọc và đặt trực tiếp trên module qua CFG9; Get không cần Set trước, tùy chọn lưu do module xử lý. Ghi một trường sẽ giữ trường còn lại; lưu CFG9 áp dụng cho cả cặp.
+- SearchType và bộ lọc tag giữ qua reconnect; tùy chọn lưu hai nhóm này dùng file trạng thái trên máy bridge.
 
 Chưa hỗ trợ đầy đủ các chức năng Nation như SuperRW, Lock/Kill, GPIO, BlockWrite, firmware và các giao thức thẻ khác. Chi tiết kiểm chứng trong [VALIDATION.md](docs/VALIDATION.md).
 
