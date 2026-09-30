@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.5 RC4 — 2026-09-30
+
+- Sửa inventory chậm/mất lượt: đọc EPC và PC trong cùng lệnh mixed inventory, chỉ đọc PC riêng khi thiếu. Giữ từng lượt thẻ, không tạo PC hoặc nhân count giả.
+- Kiểm tra sequence của packet EPC/PC; hỗ trợ wrap 127→0, phase extension và dữ liệu partial status 4. Firmware từ chối rõ ràng mới fallback về cách đọc cũ.
+- Thêm log tổng số báo cáo gửi/lọc và lỗi PC để chẩn đoán tốc độ, tránh log mã EPC khi đọc PC lỗi.
+- Sửa giải nén thư mục ZIP kết thúc bằng dấu `\` do .NET Framework tạo, gây lỗi `$PLUGINSDIR` trong bộ cài.
+- Đo trên reader thật: backend từ 2.4–2.8 lên 53.2–53.3 lượt/giây; qua SDK Nation/TCP ~34.7 lượt/giây ở lượt thử riêng. Chi tiết và giới hạn trong `docs/INVENTORY_PERFORMANCE.md`.
+
 ## 0.5 RC3 — 2026-09-28
 
 - Sửa Q/Session chỉ lưu ở bridge: Set/Get nay dùng CFG9 thật của Ex10, đọc lại sau Set và trước inventory.

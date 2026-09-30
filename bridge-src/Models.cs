@@ -41,7 +41,7 @@ namespace NationZkBridge {
     }
     public sealed class Tag {
         public byte[] Epc,Tid,User,Reserved;
-        public ushort Pc;public byte Antenna,Rssi,Result;
+        public ushort Pc;public bool PcKnown;public byte Antenna,Rssi,Result;
         public byte[] ToNation() {
             var b=new Bytes().Var(Epc).U16(Pc).U8(Antenna).U8(1).U8(Rssi).U8(2).U8(Result);
             if(Tid!=null)b.U8(3).Var(Tid);

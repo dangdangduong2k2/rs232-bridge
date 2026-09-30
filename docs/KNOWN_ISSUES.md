@@ -1,5 +1,10 @@
 # Trạng thái lỗi — 0.5 RC
 
+## RC4: tốc độ inventory
+
+- Đã xử lý điểm nghẽn đọc PC riêng sau mỗi EPC bằng mixed inventory. PC thiếu/lỗi vẫn cần đọc bổ sung; TID/User/Reserved vẫn tạo thêm lệnh, nên không bảo đảm count bằng phần mềm ZK chỉ đọc EPC.
+- Xem [phép đo và điều kiện kiểm thử](INVENTORY_PERFORMANCE.md). Parser không tạo PC giả hoặc gộp nhiều lượt thành một báo cáo.
+
 ## RC3: Q/Session và Get đầu phiên
 
 - RC2 chỉ lưu Q/Session ở bridge rồi truyền vào inventory. Kiểm thử reconnect RC2 chưa xác nhận cặp cấu hình CFG9 trên ZK; do đó không chứng minh đồng bộ với phần mềm ZK.

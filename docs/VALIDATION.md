@@ -1,5 +1,14 @@
 # Kiểm chứng 0.5 RC — 28/09/2026
 
+## RC4: inventory — 30/09/2026
+
+- Thêm 18 assertion mixed inventory: ghép PC theo sequence, không ghép sai dữ liệu, giữ các lượt EPC trùng và chuyển đủ 100 báo cáo khi chống trùng tắt.
+- Thử backend trực tiếp trên COM49, firmware 2.8, ANT1/Q2/S0; hai lượt bản cũ 2.4/2.8 lượt/giây, hai lượt bản mới 53.2/53.3 lượt/giây.
+- SDK Nation gốc qua TCP nhận 154 báo cáo hợp lệ (35 EPC khác nhau), Stop thành công và không có báo cáo muộn. Không đổi cấu hình RF hay ghi thẻ trong bài này.
+- Cài RC4 thành công, worker SHA256 khớp build. Qua COM52 và dịch vụ đã cài: 170/170 báo cáo tới SDK Nation, 36 EPC khác nhau, 4.396 giây (~38.7 lượt/giây), không sai EPC/PC/antenna hoặc báo cáo sau Stop.
+- Suite local đạt: 24 packaging, 18 protocol, 60 radio, 18 mixed inventory, 39 write, 35 SDK integration, 170 RadioSdk. Giải nén EXE đối chiếu SHA256 đủ 20 file; lỗi ZIP directory dùng dấu `\` được sửa và thử lại đạt.
+- [Chi tiết phép đo, giới hạn và log chẩn đoán](INVENTORY_PERFORMANCE.md). Không suy ra tốc độ/khả năng mọi chức năng RF từ bài đọc EPC trên ANT1.
+
 ## RC3: kiểm chứng Q/Session trên module thật
 
 - Module UHF7182M type 0x75, firmware 2.8, COM49/115200. `GetQS` cũ trả 0xEE; `GetCfgParameter(9)` trả `06-01` (Q=6, Session=1). Bridge RC2 trước sửa đang trả Q=0 từ state cũ.

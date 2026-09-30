@@ -27,7 +27,7 @@ namespace NationZkBridge {
             try {
                 var a=ReadArgs(args);
                 stopFile=Get(a,"stop-file",null);
-                if(a.Count==0||a.ContainsKey("help")){Console.WriteLine("NationZkBridge 0.5 RC3 - keep Nation software and SDK unchanged\n\nHardware: NationZkBridge.exe --zk-com COM5 --zk-baud 115200 --antennas 4 --nation-com COM11\nTCP front end (ZK still COM): --zk-com COM5 --antennas 4 --listen 18160\nSimulation only: --simulate --antennas 4 --listen 18160\nOptional: --nation-baud 115200 --max-power 30 --log bridge.log --state-file radio-state.xml\nCOM11 must be one side of an existing virtual null-modem pair. Select its OTHER side in Nation.\nTCP listens only on 127.0.0.1. No automatic physical COM probing. Ctrl+C stops.");return 0;}
+                if(a.Count==0||a.ContainsKey("help")){Console.WriteLine("NationZkBridge 0.5 RC4 - keep Nation software and SDK unchanged\n\nHardware: NationZkBridge.exe --zk-com COM5 --zk-baud 115200 --antennas 4 --nation-com COM11\nTCP front end (ZK still COM): --zk-com COM5 --antennas 4 --listen 18160\nSimulation only: --simulate --antennas 4 --listen 18160\nOptional: --nation-baud 115200 --max-power 30 --log bridge.log --state-file radio-state.xml\nCOM11 must be one side of an existing virtual null-modem pair. Select its OTHER side in Nation.\nTCP listens only on 127.0.0.1. No automatic physical COM probing. Ctrl+C stops.");return 0;}
                 bool sim=a.ContainsKey("simulate");string port=Get(a,"zk-com",null),nationPort=Get(a,"nation-com",null);
                 bridgeState=new BridgeState(Get(a,"state-file",null));
                 bool watchPeer=Get(a,"watch-peer","no")=="yes";

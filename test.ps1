@@ -5,7 +5,7 @@ $testDir = Join-Path $root 'test-results'
 $bridge = Join-Path $root 'payload\bin\x64\NationZkBridge.exe'
 Copy-Item -LiteralPath $bridge -Destination $testDir
 Copy-Item -LiteralPath (Join-Path $root 'bridge-tests\vendor\GReaderApi.dll') -Destination $testDir
-foreach ($test in @('ProtocolTests','RadioTests','SdkIntegration','RadioSdk')) {
+foreach ($test in @('ProtocolTests','RadioTests','MixedInventoryTests','SdkIntegration','RadioSdk')) {
     $reference = if ($test -in @('SdkIntegration','RadioSdk')) { 'GReaderApi.dll' } else { 'NationZkBridge.exe' }
     & $compiler /nologo /platform:x64 "/out:$testDir\$test.exe" "/r:$testDir\$reference" (Join-Path $root "bridge-tests\$test.cs")
     if ($LASTEXITCODE -ne 0) { throw 'Test compile failed' }
@@ -13,10 +13,14 @@ foreach ($test in @('ProtocolTests','RadioTests','SdkIntegration','RadioSdk')) {
 # Compile the opt-in hardware regression; never open COM ports in the default suite.
 & $compiler /nologo /platform:x64 "/out:$testDir\BasebandSdk.exe" "/r:$testDir\NationZkBridge.exe" "/r:$testDir\GReaderApi.dll" (Join-Path $root 'bridge-tests\BasebandSdk.cs')
 if ($LASTEXITCODE -ne 0) { throw 'Baseband hardware test compile failed' }
+& $compiler /nologo /platform:x64 "/out:$testDir\InventoryHardwareSdk.exe" "/r:$testDir\GReaderApi.dll" (Join-Path $root 'bridge-tests\InventoryHardwareSdk.cs')
+if ($LASTEXITCODE -ne 0) { throw 'Inventory hardware test compile failed' }
 & (Join-Path $testDir 'ProtocolTests.exe') | Tee-Object -FilePath (Join-Path $testDir 'protocol-tests.txt')
 if ($LASTEXITCODE -ne 0) { throw 'Protocol tests failed' }
 & (Join-Path $testDir 'RadioTests.exe') | Tee-Object -FilePath (Join-Path $testDir 'radio-tests.txt')
 if ($LASTEXITCODE -ne 0) { throw 'Radio tests failed' }
+& (Join-Path $testDir 'MixedInventoryTests.exe') | Tee-Object -FilePath (Join-Path $testDir 'mixed-inventory-tests.txt')
+if ($LASTEXITCODE -ne 0) { throw 'Mixed inventory tests failed' }
 & $compiler /nologo /platform:x64 "/out:$testDir\WriteTests.exe" "/r:$testDir\NationZkBridge.exe" "/r:$testDir\GReaderApi.dll" (Join-Path $root 'bridge-tests\WriteTests.cs')
 if ($LASTEXITCODE -ne 0) { throw 'Write test compile failed' }
 & (Join-Path $testDir 'WriteTests.exe') | Tee-Object -FilePath (Join-Path $testDir 'write-tests.txt')
@@ -41,7 +45,13 @@ try {
     if (Test-Path -LiteralPath $stopFile) { Remove-Item -LiteralPath $stopFile }
 }
 $extractDir = Join-Path $testDir ('extracted-' + [guid]::NewGuid().ToString())
-$extract = Start-Process -FilePath (Join-Path $root 'NationComPortSetup.exe') -ArgumentList @('/extract',('"' + $extractDir + '"')) -WindowStyle Hidden -PassThru -Wait
+$extractInfo = New-Object System.Diagnostics.ProcessStartInfo
+$extractInfo.FileName = Join-Path $root 'NationComPortSetup.exe'
+$extractInfo.Arguments = '/extract "' + $extractDir + '"'
+$extractInfo.UseShellExecute = $false
+$extractInfo.WindowStyle = [System.Diagnostics.ProcessWindowStyle]::Hidden
+$extract = [System.Diagnostics.Process]::Start($extractInfo)
+$extract.WaitForExit()
 if ($extract.ExitCode -ne 0) { throw 'Self-extraction failed' }
 $files = Get-ChildItem -LiteralPath (Join-Path $root 'payload') -File -Recurse
 foreach ($f in $files) {

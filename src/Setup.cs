@@ -75,7 +75,8 @@ namespace NationComPort {
                     string target=Path.GetFullPath(Path.Combine(root,entry.FullName.Replace('/',Path.DirectorySeparatorChar)));
                     if(!target.StartsWith(Path.GetFullPath(root)+Path.DirectorySeparatorChar,StringComparison.OrdinalIgnoreCase))throw new InvalidDataException("Unsafe archive path.");
                     Common.SafeDirectory(Path.GetDirectoryName(target));
-                    if(entry.FullName.EndsWith("/")){Directory.CreateDirectory(target);continue;}
+                    // .NET Framework's ZIP writer uses backslashes for directory entries.
+                    if(entry.FullName.EndsWith("/")||entry.FullName.EndsWith("\\")){Common.SafeDirectory(target);Directory.CreateDirectory(target);continue;}
                     if(File.Exists(target)&&(File.GetAttributes(target)&FileAttributes.ReparsePoint)!=0)throw new IOException("Linked payload file: "+target);
                     Directory.CreateDirectory(Path.GetDirectoryName(target));using(var input=entry.Open())using(var output=File.Create(target))input.CopyTo(output);
                 }
@@ -162,7 +163,7 @@ namespace NationComPort {
                 Thread.Sleep(500);
                 Common.Run(Path.Combine(Common.InstallRoot,"diagnostics","NationSerialCheck.exe"),"--serial "+s.NationPort+":115200",55,Log);
                 using(var k=Registry.LocalMachine.CreateSubKey(@"SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\NationComPort")){
-                    k.SetValue("DisplayName","Nation COM Port (ZK bridge)");k.SetValue("DisplayVersion","0.5 RC3");k.SetValue("InstallLocation",Common.InstallRoot);k.SetValue("UninstallString",Common.Quote(target)+" /uninstall");k.SetValue("NoModify",1);k.SetValue("NoRepair",1);
+                    k.SetValue("DisplayName","Nation COM Port (ZK bridge)");k.SetValue("DisplayVersion","0.5 RC4");k.SetValue("InstallLocation",Common.InstallRoot);k.SetValue("UninstallString",Common.Quote(target)+" /uninstall");k.SetValue("NoModify",1);k.SetValue("NoRepair",1);
                 }
                 string pending=Path.Combine(Common.InstallRoot,"pending-pair.txt");if(File.Exists(pending))File.Delete(pending);
                 Log("PASS: original Nation protocol returned real reader firmware through "+s.NationPort);

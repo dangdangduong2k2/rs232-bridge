@@ -22,6 +22,7 @@ namespace NationZkBridge {
         [DllImport(Dll,CallingConvention=CallingConvention.StdCall)] internal static extern int WriteData_G2(ref byte address,byte[] epc,byte words,byte epcWords,byte memory,byte wordPointer,byte[] data,byte[] password,byte maskMem,byte[] maskAdr,byte maskLen,byte[] maskData,ref int tagError,int handle);
         [DllImport(Dll,CallingConvention=CallingConvention.StdCall)] internal static extern int ExtWriteData_G2(ref byte address,byte[] epc,byte words,byte epcWords,byte memory,byte[] wordPointer,byte[] data,byte[] password,byte maskMem,byte[] maskAdr,byte maskLen,byte[] maskData,ref int tagError,int handle);
         [DllImport(Dll,CallingConvention=CallingConvention.StdCall)] internal static extern int Inventory_G2(ref byte address,byte q,byte session,byte maskMem,byte[] maskAdr,byte maskLen,byte[] maskData,byte maskFlag,byte adrTid,byte lenTid,byte tidFlag,byte target,byte inAnt,byte scanTime,byte fastFlag,[Out] byte[] data,ref byte ant,ref int total,ref int count,int handle);
+        [DllImport(Dll,CallingConvention=CallingConvention.StdCall)] internal static extern int InventoryMix_G2(ref byte address,byte q,byte session,byte maskMem,byte[] maskAdr,byte maskLen,byte[] maskData,byte maskFlag,byte readMem,byte[] readAdr,byte readLen,byte[] password,byte target,byte inAnt,byte scanTime,byte fastFlag,[Out] byte[] data,ref byte ant,ref int total,ref int count,int handle);
         [DllImport(Dll,CallingConvention=CallingConvention.StdCall)] internal static extern int ReadData_G2(ref byte address,byte[] epc,byte epcWords,byte memory,byte wordPointer,byte words,byte[] password,byte maskMem,byte[] maskAdr,byte maskLen,byte[] maskData,[Out] byte[] data,ref int tagError,int handle);
     }
     public sealed class ZkException : IOException {
@@ -121,6 +122,33 @@ namespace NationZkBridge {
             if(offset!=total)throw new InvalidDataException("Unexpected ZK inventory tail");
             return list;
         }
+        // Mixed inventory returns EPC/data packets with consecutive 7-bit sequence numbers.
+        // Retain every EPC occurrence, even when the following PC read is missing.
+        public static List<Tag> ParseMixedInventory(byte[] data,int total,int count,byte antenna) {
+            if(total<0||total>data.Length||count<0||count>total/5)throw new InvalidDataException("Invalid ZK mixed inventory bounds");
+            var tags=new List<Tag>();int offset=0,previous=-1;Tag pending=null;
+            for(int i=0;i<count;i++) {
+                if(offset+2>total)throw new InvalidDataException("Missing mixed inventory record");
+                byte packet=data[offset++],flags=data[offset++];int length=flags&63;
+                if((flags&128)!=0||length<2||(length&1)!=0||offset+length+1+((flags&64)!=0?7:0)>total)
+                    throw new InvalidDataException("Malformed mixed inventory record");
+                bool memory=(packet&128)!=0;int sequence=packet&127;
+                if(memory) {
+                    if(length!=2)throw new InvalidDataException("Mixed PC must contain exactly one word");
+                    if(pending!=null&&sequence==((previous+1)&127)) {
+                        pending.Pc=(ushort)((data[offset]<<8)|data[offset+1]);pending.PcKnown=true;
+                    }
+                    pending=null;
+                } else {
+                    var epc=new byte[length];Array.Copy(data,offset,epc,0,length);
+                    pending=new Tag{Epc=epc,Antenna=antenna,Rssi=data[offset+length]};tags.Add(pending);
+                }
+                previous=sequence;offset+=length+1+((flags&64)!=0?7:0);
+            }
+            if(offset!=total)throw new InvalidDataException("Unexpected mixed inventory tail");
+            return tags;
+        }
+        bool mixedUnsupported;
         byte[] ReadWords(Tag t,byte bank,byte start,byte words,byte[] password,out int rc,out int error) {
             var data=new byte[512];error=0;
             rc=Native.ReadData_G2(ref address,t.Epc,(byte)(t.Epc.Length/2),bank,start,words,password,0,new byte[2],0,new byte[32],data,ref error,handle);
@@ -133,19 +161,29 @@ namespace NationZkBridge {
             stop.ThrowIfCancellationRequested();
             byte ant=0;int total=0,count=0;var data=new byte[50000];
             var mask=new byte[32];Array.Copy(request.Filter,mask,request.Filter.Length);
-            int rc=Native.Inventory_G2(ref address,q,session,request.FilterBank,new byte[]{(byte)(request.FilterAddress>>8),(byte)request.FilterAddress},request.FilterBits,mask,(byte)(request.FilterBits>0?1:0),0,0,0,target,(byte)(0x80+antenna-1),2,1,data,ref ant,ref total,ref count,handle);
+            byte[] maskAddress={(byte)(request.FilterAddress>>8),(byte)request.FilterAddress};
+            bool mixed=!mixedUnsupported;int rc;
+            if(mixed) {
+                rc=Native.InventoryMix_G2(ref address,q,session,request.FilterBank,maskAddress,request.FilterBits,mask,(byte)(request.FilterBits>0?1:0),1,new byte[]{0,1},1,request.Password,target,(byte)(0x80+antenna-1),2,1,data,ref ant,ref total,ref count,handle);
+                // Only an explicit command/parameter rejection permits the legacy path.
+                if(rc==0xFD||rc==0xFE||rc==0xEE){mixedUnsupported=true;mixed=false;total=0;count=0;ant=0;log("Mixed EPC/PC inventory rejected; using separate PC reads for this connection");}
+            } else rc=0;
+            if(!mixed)rc=Native.Inventory_G2(ref address,q,session,request.FilterBank,maskAddress,request.FilterBits,mask,(byte)(request.FilterBits>0?1:0),0,0,0,target,(byte)(0x80+antenna-1),2,1,data,ref ant,ref total,ref count,handle);
             if(rc==0xFB)return new List<Tag>();
-            if(rc!=1&&rc!=2)throw new ZkException("Inventory_G2",rc);
+            if(rc!=1&&rc!=2&&rc!=4)throw new ZkException(mixed?"InventoryMix_G2":"Inventory_G2",rc);
             if(count>0&&ant!=(byte)(1<<(antenna-1)))
                 throw new InvalidDataException("ZK returned antenna mask 0x"+ant.ToString("X2")+" while antenna "+antenna+" was requested; refusing to mislabel tags");
-            var tags=ParseInventory(data,total,count,antenna);
-            var output=new List<Tag>();
+            var tags=mixed?ParseMixedInventory(data,total,count,antenna):ParseInventory(data,total,count,antenna);
+            var output=new List<Tag>();int pcReads=0,pcFailed=0;
             foreach(var t in tags) {
-                stop.ThrowIfCancellationRequested();int error;
+                stop.ThrowIfCancellationRequested();int error=0;
                 // Read real PC bits; never fabricate them from EPC length.
-                byte[] pc=ReadWords(t,1,1,1,request.Password,out rc,out error);CheckTransport(rc);
-                if(pc==null){log("PC read failed for "+BitConverter.ToString(t.Epc)+": ZK 0x"+rc.ToString("X2")+"; report skipped");continue;}
-                t.Pc=(ushort)((pc[0]<<8)|pc[1]);
+                if(!t.PcKnown){
+                    pcReads++;
+                    byte[] pc=ReadWords(t,1,1,1,request.Password,out rc,out error);CheckTransport(rc);
+                    if(pc==null){pcFailed++;continue;}
+                    t.Pc=(ushort)((pc[0]<<8)|pc[1]);t.PcKnown=true;
+                }
                 if(request.TidWords>0) {
                     for(byte words=request.TidWords;words>0;words--) {
                         stop.ThrowIfCancellationRequested();
@@ -160,6 +198,7 @@ namespace NationZkBridge {
                 if(request.ReservedWords>0){stop.ThrowIfCancellationRequested();t.Reserved=ReadWords(t,0,(byte)request.ReservedAddress,request.ReservedWords,request.Password,out rc,out error);CheckTransport(rc);if(rc!=0)t.Result=TagError(rc,error);}
                 output.Add(t);
             }
+            if(pcFailed>0)log("INVENTORY PC: antenna="+antenna+" epc="+tags.Count+" separate_reads="+pcReads+" failed="+pcFailed+" returned="+output.Count);
             return output;
         }
         public void Dispose(){if(handle>=0){int h=handle;handle=-1;Native.CloseSpecComPort(h);}}
