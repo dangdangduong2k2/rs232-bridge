@@ -142,13 +142,19 @@ namespace NationComPort {
                     var ports=Common.PairPorts(Common.Run(Driver,"--silent list",15,Log),s.Pair);
                     if(ports["A"]!=s.NationPort||ports["B"]!=s.BridgePort)throw new IOException("Cặp COM đã bị thay đổi bên ngoài bộ cài; không tự sửa.");
                 }
-                Common.TestPair(s.NationPort,s.BridgePort);Log("Virtual COM pair bidirectional test passed.");
+                // COM# belongs to the standard Ports class and remains enumerable even
+                // with HiddenMode. An explicit name uses CNCPorts; HiddenMode then
+                // suppresses PortName/device-map publication while keeping direct open.
+                Common.Run(Driver,Common.HiddenBridgeArgs(s),60,Log);
+                var hiddenPorts=Common.PairPorts(Common.Run(Driver,"--silent list",15,Log),s.Pair);
+                if(hiddenPorts["A"]!=s.NationPort||hiddenPorts["B"]!=s.BridgePort)throw new IOException("Port mapping changed during internal endpoint configuration.");
+                Common.RequireHiddenBridge(s);
+                Common.TestPair(s.NationPort,s.BridgePort);Log("Virtual COM pair bidirectional/DSR test passed; internal endpoint hidden.");
                 var all=Common.Ports();
-                foreach(var p in new[]{s.NationPort,s.BridgePort}){
-                    var found=all.SingleOrDefault(x=>x.Name==p&&x.Id.StartsWith("COM0COM",StringComparison.OrdinalIgnoreCase));
-                    if(found==null)throw new IOException("Không nhận diện được cổng COM ảo "+p+" trong Windows.");
-                    Common.FriendlyName(found.Id,(p==s.NationPort?"Nation COM Port":"Nation Bridge Internal")+" ("+p+")");
-                }
+                var found=all.SingleOrDefault(x=>x.Name==s.NationPort&&x.Id.StartsWith("COM0COM",StringComparison.OrdinalIgnoreCase));
+                if(found==null)throw new IOException("Không nhận diện được cổng COM ảo "+s.NationPort+" trong Windows.");
+                Common.FriendlyName(found.Id,"Nation COM Port ("+s.NationPort+")");
+                Common.FriendlyName(Common.BridgeDeviceId(s),"Nation Bridge Internal");
                 s.Save(Common.Config);
                 string service=Path.Combine(Common.InstallRoot,"NationComService.exe");
                 if(!ServiceExists(Common.ServiceName)){
@@ -163,7 +169,7 @@ namespace NationComPort {
                 Thread.Sleep(500);
                 Common.Run(Path.Combine(Common.InstallRoot,"diagnostics","NationSerialCheck.exe"),"--serial "+s.NationPort+":115200",55,Log);
                 using(var k=Registry.LocalMachine.CreateSubKey(@"SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\NationComPort")){
-                    k.SetValue("DisplayName","Nation COM Port (ZK bridge)");k.SetValue("DisplayVersion","0.5 RC6");k.SetValue("InstallLocation",Common.InstallRoot);k.SetValue("UninstallString",Common.Quote(target)+" /uninstall");k.SetValue("NoModify",1);k.SetValue("NoRepair",1);
+                    k.SetValue("DisplayName","Nation COM Port (ZK bridge)");k.SetValue("DisplayVersion","0.5 RC7");k.SetValue("InstallLocation",Common.InstallRoot);k.SetValue("UninstallString",Common.Quote(target)+" /uninstall");k.SetValue("NoModify",1);k.SetValue("NoRepair",1);
                 }
                 string pending=Path.Combine(Common.InstallRoot,"pending-pair.txt");if(File.Exists(pending))File.Delete(pending);
                 Log("PASS: original Nation protocol returned real reader firmware through "+s.NationPort);

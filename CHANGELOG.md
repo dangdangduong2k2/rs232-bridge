@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.5 RC7 — 2026-09-30
+
+- Ẩn đầu nội bộ khỏi danh sách serial: chuyển riêng đầu B sang lớp CNCPorts với tên COM tường minh và `HiddenMode=yes`. Giữ nguyên số COM công khai và nội bộ khi nâng cấp.
+- Bridge vẫn mở trực tiếp đầu B; giữ truyền hai chiều và tín hiệu DSR theo trạng thái mở của Nation. Bộ cài xác nhận đầu nội bộ không còn công bố PortName trước khi khởi động dịch vụ.
+- Dùng driver Microsoft Catalog nguyên bản, không cần sửa hoặc ký lại driver cho tính năng ẩn. Tên công khai trong Chrome vẫn có thể là com0com; đổi tên driver là công việc riêng.
+- Kiểm thử cặp tạm trước/sau restart thiết bị, 30 kiểm tra đóng gói và toàn bộ suite local đạt. Đã cài trên COM52/COM53 và đọc thẻ qua SDK Nation gốc; xem [VALIDATION.md](docs/VALIDATION.md).
+
 ## 0.5 RC6 — 2026-09-30
 
 - Sửa khoảng đứng count định kỳ: không gọi `GetRfidTagData` sau `StopRead`. Đây là receive có timeout, không phải thao tác lấy nhanh dữ liệu còn trong queue; trên module thử, lần gọi thừa này chờ khoảng 1.3 giây.

@@ -90,6 +90,16 @@ namespace NationComPort {
             if(result["A"]==result["B"])throw new InvalidDataException("Hai đầu cặp COM bị trùng.");return result;
         }
         public static int FreePair(string listing){for(int n=0;n<1000000;n++)if(!Regex.IsMatch(listing,@"(?m)^\s*CNC[AB]"+n+@"\s"))return n;throw new IOException("Không còn vị trí COM ảo.");}
+        public static string HiddenBridgeArgs(Settings s){s.Validate();return "--silent --wait 30 change CNCB"+s.Pair+" PortName="+s.BridgePort+",HiddenMode=yes";}
+        public static string BridgeDeviceId(Settings s){s.Validate();return @"COM0COM\PORT\CNCB"+s.Pair;}
+        public static void RequireHiddenBridge(Settings s){
+            s.Validate();
+            using(var device=Registry.LocalMachine.OpenSubKey(@"SYSTEM\CurrentControlSet\Enum\"+BridgeDeviceId(s))){
+                if(device==null||!string.Equals(Convert.ToString(device.GetValue("ClassGUID")),"{df799e12-3c56-421b-b298-b6d3642bc878}",StringComparison.OrdinalIgnoreCase))throw new IOException("Internal endpoint is not in the private CNCPorts class.");
+                using(var parameters=device.OpenSubKey("Device Parameters"))if(parameters!=null&&parameters.GetValue("PortName")!=null)throw new IOException("Internal endpoint still publishes PortName to serial enumerators.");
+            }
+            if(SerialPort.GetPortNames().Any(p=>string.Equals(p,s.BridgePort,StringComparison.OrdinalIgnoreCase)))throw new IOException("Internal endpoint remains in the serial port list.");
+        }
         public static void TestPair(string a,string b){
             using(var x=new SerialPort(a,115200))using(var y=new SerialPort(b,115200)){
                 x.ReadTimeout=y.ReadTimeout=1800;x.WriteTimeout=y.WriteTimeout=1800;x.Open();y.Open();x.DiscardInBuffer();y.DiscardInBuffer();

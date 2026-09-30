@@ -12,7 +12,7 @@ Adapter USB phải hiện COM hoạt động trong Device Manager trước khi c
 
 ## Cài mới
 
-1. Tải [RS232-Bridge-Setup.exe](https://github.com/dangdangduong2k2/rs232-bridge/releases/download/v0.5.0-rc.6/RS232-Bridge-Setup.exe).
+1. Tải [RS232-Bridge-Setup.exe](https://github.com/dangdangduong2k2/rs232-bridge/releases/download/v0.5.0-rc.7/RS232-Bridge-Setup.exe).
 2. Cắm module, xác định COM vật lý trong **Device Manager → Ports (COM & LPT)**.
 3. Đóng Nation và mọi phần mềm ZK/serial terminal đang mở cổng.
 4. Chạy EXE. Cửa sổ chính chỉ có `driver RS232 brigde`, `setup` và `cancel`.
@@ -20,7 +20,7 @@ Adapter USB phải hiện COM hoạt động trong Device Manager trước khi c
 6. Chờ thông báo hoàn tất, ghi lại số **Nation COM Port**. Nếu báo lỗi, xem [xử lý lỗi](TROUBLESHOOTING.md).
 7. Mở Nation, chọn RS232, **Nation COM Port**, baud **115200**, rồi kết nối và đọc thử.
 
-Ví dụ cổng vật lý COM49, Nation COM Port COM52, Nation Bridge Internal COM53: **phần mềm Nation chọn COM52**. Số COM trên máy khác có thể khác.
+Ví dụ cổng vật lý COM49, Nation COM Port COM52, đầu nội bộ COM53: **phần mềm Nation chọn COM52**. Từ RC7, COM53 được ẩn khỏi danh sách serial thông thường nhưng vẫn lưu trong cấu hình để bridge mở trực tiếp. Số COM trên máy khác có thể khác. Đóng/mở lại hộp chọn cổng; nếu Chrome còn danh sách cũ, khởi động lại Chrome. [Chi tiết](INTERNAL_PORT.md).
 
 ## Cài đặt tạo những gì?
 
@@ -30,12 +30,14 @@ Ví dụ cổng vật lý COM49, Nation COM Port COM52, Nation Bridge Internal C
 | Cấu hình thiết bị | `%ProgramFiles%\NationComPort\settings.xml` |
 | Dịch vụ tự chạy cùng Windows | `NationZkComBridge` |
 | Cổng cho ứng dụng | `Nation COM Port (COMx)` |
-| Cổng nội bộ | `Nation Bridge Internal (COMy)` |
+| Cổng nội bộ | `Nation Bridge Internal`, thuộc lớp CNCPorts, không công bố trong danh sách serial thông thường |
 | Nhật ký và trạng thái | `%ProgramData%\NationComPort` |
 
 Bộ cài kiểm tra truyền hai chiều của cặp COM, trạng thái mở/đóng và phản hồi thông tin reader bằng SDK Nation trước khi báo thành công. Đây không phải nghiệm thu mọi chức năng RF.
 
 ## Nâng cấp / cài lại
+
+RC7 tự chuyển cổng nội bộ của bản cũ sang chế độ ẩn, giữ nguyên số COM. Dùng RC7 hoặc mới hơn để repair; bộ cài cũ có thể không nhận diện được đầu đã ẩn. Xem [khôi phục và giới hạn](INTERNAL_PORT.md).
 
 Từ RC5, EPC-only liên tục mặc định dùng Scenario, PC đọc thật rồi dùng lại trong phiên. Nếu nghiệp vụ cần PC mới từng lượt, kỹ thuật viên đặt `<EpcMode>fresh-pc</EpcMode>` trong `%ProgramFiles%\NationComPort\settings.xml`, giữ nguyên các trường khác, rồi khởi động lại dịch vụ `NationZkComBridge`. Giá trị `scenario` bật lại chế độ nhanh. Chi tiết trong [tài liệu hiệu năng](INVENTORY_PERFORMANCE.md).
 

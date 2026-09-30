@@ -1,5 +1,11 @@
 # Trạng thái lỗi — 0.5 RC
 
+## RC7: ẩn cổng nội bộ
+
+- Đã xác nhận đầu B vắng trong `.NET SerialPort.GetPortNames()` và không công bố registry `PortName`; bridge vẫn đọc qua cặp COM được. Chưa kiểm tra trực quan hộp chọn cổng Chrome sau nâng cấp; Chrome có thể cần mở lại để bỏ danh sách cũ.
+- Đây là tránh chọn nhầm trong danh sách, không phải ranh giới bảo mật. Công cụ quản trị vẫn có thể thấy thiết bị CNCPorts; ứng dụng biết tên COM nội bộ có thể thử mở khi dịch vụ không giữ nó.
+- Tên public do driver báo cho Chrome vẫn có thể là com0com. RC7 giữ driver đã ký nguyên bản. [Chi tiết](INTERNAL_PORT.md).
+
 ## RC6: khoảng ngừng định kỳ
 
 - Đã bỏ receive sau Stop gây timeout khoảng 1.3 giây trong RC5; hạn chế từng đợt đọc PC và giãn retry thẻ lỗi. Xem [cơ chế và phép đo](INVENTORY_PERFORMANCE.md).

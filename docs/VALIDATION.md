@@ -1,5 +1,13 @@
 # Kiểm chứng 0.5 RC — 28/09/2026
 
+## RC7: cổng nội bộ — 30/09/2026
+
+- Cặp COM tạm: chuyển B sang tên COM tường minh + `HiddenMode=yes`; truyền hai chiều và DSR đạt trước/sau restart thiết bị PnP. Lớp B là CNCPorts, không có registry `PortName`, không có trong `.NET SerialPort.GetPortNames()`. Đã xóa riêng cặp thử sau kiểm tra.
+- Cài nâng cấp cặp thật COM52/COM53 đạt; số COM giữ nguyên, COM53 vắng khỏi danh sách serial, B thuộc CNCPorts. Dịch vụ Running, SHA256 worker cài khớp build. Bộ cài kiểm tra hai chiều/DSR và truy vấn firmware thật bằng DLL Nation gốc đạt.
+- Đọc qua DLL Nation gốc → COM52 trong 10.359 giây: 1150 báo cáo, 42 EPC, không sai trường EPC/PC/antenna. Khoảng callback lớn nhất 391 ms, không khoảng ≥ 500 ms; Stop bình thường, không báo cáo muộn. Đây là smoke test cấu hình cổng, không phải so sánh hiệu năng có kiểm soát với RC6.
+- Suite local đạt: 30 packaging, 18 protocol, 60 radio, 18 mixed inventory, 27 Scenario, 39 write, 35 SDK integration, 170 RadioSdk; self-extraction 20 file khớp hash.
+- Chưa reboot toàn máy hoặc kiểm tra trực quan hộp chọn Chrome sau nâng cấp. Cơ chế Chromium bỏ thiết bị không đọc được `PortName` được đối chiếu source; không coi đó là kiểm thử UI thực tế. Không ghi thẻ trong đợt này.
+
 ## RC6: khoảng ngừng — 30/09/2026
 
 - RC5 qua COM52 trong 40 giây: khoảng callback lớn nhất 3543 ms, 5 khoảng ≥ 1 giây. Instrumentation trên reader xác nhận `GetRfidTagData` sau Stop chờ 1291–1304 ms.

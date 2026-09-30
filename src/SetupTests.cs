@@ -18,6 +18,9 @@ class SetupTests {
         string listing="  CNCA0 PortName=COM#,RealPortName=COM5,EmuOverrun=yes\r\n  CNCB0 PortName=COM#,RealPortName=COM6\r\n  CNCA1 PortName=COM10\r\n  CNCB1 PortName=COM11\r\n";
         var ports=Common.PairPorts(listing,0);Assert(ports["A"]=="COM5"&&ports["B"]=="COM6","parse Ports class endpoints");
         Assert(Common.PairPorts(listing,1)["A"]=="COM10","parse explicit endpoints");
+        var hidden=Common.PairPorts("CNCA0 PortName=COM#,RealPortName=COM5\r\nCNCB0 PortName=COM6,HiddenMode=yes,dsr=ropen",0);Assert(hidden["A"]=="COM5"&&hidden["B"]=="COM6","hidden internal endpoint preserves public/private mapping on repair");
+        Assert(Common.HiddenBridgeArgs(Valid())=="--silent --wait 30 change CNCB0 PortName=COM6,HiddenMode=yes","hide only B using explicit name without altering peer wiring");
+        Assert(Common.BridgeDeviceId(Valid())==@"COM0COM\PORT\CNCB0","rename hidden device by owned identity without re-enumerating as public port");
         Reject(()=>Common.PairPorts(listing,2),"missing driver endpoints fail");
         Reject(()=>Common.PairPorts("CNCA0 PortName=COM#\nCNCB0 PortName=COM#",0),"unassigned ports fail");
         Assert(Common.FreePair(listing)==2,"preserve existing pairs");Assert(Common.FreePair("CNCA10 PortName=COM20")==0,"pair boundary match");

@@ -2,11 +2,11 @@
 
 Bộ chuyển giao thức để phần mềm Nation dùng `GReaderApi.dll` kết nối module ZK qua RS232, giữ nguyên phần mềm Nation.
 
-**Bản thử nghiệm 0.5 RC6.** Đã thử đọc và ghi EPC/User trên module ZK 4 anten; chưa thay thế toàn bộ SDK Nation. Xem [các lỗi đã biết](docs/KNOWN_ISSUES.md).
+**Bản thử nghiệm 0.5 RC7.** Đã thử đọc và ghi EPC/User trên module ZK 4 anten; chưa thay thế toàn bộ SDK Nation. Xem [các lỗi đã biết](docs/KNOWN_ISSUES.md).
 
 ## Tải và cài
 
-**[Tải EXE](https://github.com/dangdangduong2k2/rs232-bridge/releases/download/v0.5.0-rc.6/RS232-Bridge-Setup.exe)** · [Trang phát hành](https://github.com/dangdangduong2k2/rs232-bridge/releases/tag/v0.5.0-rc.6)
+**[Tải EXE](https://github.com/dangdangduong2k2/rs232-bridge/releases/download/v0.5.0-rc.7/RS232-Bridge-Setup.exe)** · [Trang phát hành](https://github.com/dangdangduong2k2/rs232-bridge/releases/tag/v0.5.0-rc.7)
 
 Lập trình ứng dụng mới trên Windows/macOS/Linux: dùng **[ZK Reader API — Python SDK + HTTP, source và OpenAPI](https://github.com/dangdangduong2k2/zk-reader-api)**, reader cắm trực tiếp vào máy chạy API.
 
@@ -15,15 +15,15 @@ Lập trình ứng dụng mới trên Windows/macOS/Linux: dùng **[ZK Reader AP
 3. Máy mới chọn COM vật lý, baud và 1/4 anten một lần. Máy đã cài dùng cấu hình lưu sẵn.
 4. Sau thông báo thành công, mở Nation, chọn **RS232 → Nation COM Port (COMx) → 115200**. Nếu Nation chỉ hiện số COM, chọn số bộ cài thông báo.
 
-Không chọn `Nation Bridge Internal` hoặc COM vật lý ZK trong Nation. Dịch vụ tự chạy cùng Windows. **cancel** đóng bộ cài.
+Từ RC7, cổng `Nation Bridge Internal` được ẩn khỏi danh sách serial thông thường để tránh chọn nhầm; bridge vẫn mở trực tiếp đầu này. Chọn **Nation COM Port**, không chọn COM vật lý ZK. Dịch vụ tự chạy cùng Windows. **cancel** đóng bộ cài. [Cơ chế và giới hạn ẩn cổng](docs/INTERNAL_PORT.md).
 
-Chrome có thể vẫn hiển thị `com0com` do dùng tên driver báo lên. [Source chuẩn bị đổi tên driver](driver-branding/README.md) đã có riêng; chưa build/ký/cài, nên EXE RC6 chưa đổi tên trong Chrome.
+Chrome có thể vẫn hiển thị `com0com` do dùng tên driver báo lên. [Source chuẩn bị đổi tên driver](driver-branding/README.md) đã có riêng; chưa build/ký/cài, nên EXE RC7 chưa đổi tên trong Chrome.
 
 Windows x64, .NET Framework 4.5 trở lên; cần Internet khi tải driver lần đầu. Driver USB của adapter cần có sẵn. EXE bộ cài chưa ký Authenticode; driver COM ảo tải từ Microsoft Update Catalog và kiểm tra SHA256.
 
 ## Chức năng chính
 
-- RC6 đọc EPC liên tục bằng Scenario, dùng lại PC đã đọc thật trong cùng phiên để ưu tiên tốc độ; TID/User/Reserved hoặc đọc có mask vẫn dùng đường đọc đầy đủ. [Kết quả đo, giới hạn PC cache và cách kiểm tra count](docs/INVENTORY_PERFORMANCE.md).
+- RC7 đọc EPC liên tục bằng Scenario, dùng lại PC đã đọc thật trong cùng phiên để ưu tiên tốc độ; TID/User/Reserved hoặc đọc có mask vẫn dùng đường đọc đầy đủ. [Kết quả đo, giới hạn PC cache và cách kiểm tra count](docs/INVENTORY_PERFORMANCE.md).
 - Đọc EPC/TID/User/Reserved, chọn anten, lọc EPC/TID, chống trùng, RSSI, Start/Stop.
 - Ghi EPC/User và chuyển lệnh ghi 6C theo vùng nhớ, bộ lọc và mật khẩu; mỗi lệnh 1–64 word. Khả năng ghi phụ thuộc bộ nhớ và trạng thái khóa của thẻ.
 - Set/Get công suất riêng từng anten; sửa một anten giữ nguyên các anten còn lại.

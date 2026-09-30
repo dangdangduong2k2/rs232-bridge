@@ -39,7 +39,7 @@ namespace NationZkBridge {
                     case 0x100:
                         Empty(f);
                         var b=new Bytes().Text(reader.Info.Identity).U32((uint)(DateTime.UtcNow-started).TotalSeconds).Text("Nation-ZK bridge");
-                        b.U8(1).U32(0x00010000).U8(2).Text("ZK compatibility bridge 0.5 RC6");Reply(f,b.ToArray());break;
+                        b.U8(1).U32(0x00010000).U8(2).Text("ZK compatibility bridge 0.5 RC7");Reply(f,b.ToArray());break;
                     case 0x101:
                         Empty(f);Reply(f,new byte[]{0,reader.Info.Version[0],reader.Info.Version[1],0});break;
                     case 0x103:
