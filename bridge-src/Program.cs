@@ -18,17 +18,17 @@ namespace NationZkBridge {
         static Dictionary<string,string> ReadArgs(string[] args) {
             var r=new Dictionary<string,string>(StringComparer.OrdinalIgnoreCase);
             for(int i=0;i<args.Length;i++){if(args[i]=="--help"){r["help"]="true";continue;}if(args[i]=="--simulate"){r["simulate"]="true";continue;}if(!args[i].StartsWith("--")||i+1>=args.Length)throw new ArgumentException("Arguments are --name value");string key=args[i].Substring(2);if(r.ContainsKey(key))throw new ArgumentException("Duplicate argument "+key);r.Add(key,args[++i]);}
-            foreach(string k in r.Keys)if(Array.IndexOf(new[]{"help","simulate","nation-com","nation-baud","listen","zk-com","zk-baud","antennas","max-power","log","stop-file","watch-peer","state-file"},k)<0)throw new ArgumentException("Unknown argument "+k);
+            foreach(string k in r.Keys)if(Array.IndexOf(new[]{"help","simulate","nation-com","nation-baud","listen","zk-com","zk-baud","antennas","max-power","log","stop-file","watch-peer","state-file","epc-mode"},k)<0)throw new ArgumentException("Unknown argument "+k);
             return r;
         }
         static string Get(Dictionary<string,string> a,string k,string d){string v;return a.TryGetValue(k,out v)?v:d;}
-        static IReader OpenReader(bool simulation,string port,int baud,byte antennas,byte maxPower){return simulation?(IReader)new SimReader(antennas):new ZkReader(port,baud,antennas,maxPower,Log);}
+        static IReader OpenReader(bool simulation,string port,int baud,byte antennas,byte maxPower,bool scenario){if(simulation)return new SimReader(antennas);var reader=new ZkReader(port,baud,antennas,maxPower,Log);reader.ScenarioEnabled=scenario;return reader;}
         public static int Main(string[] args) {
             try {
                 var a=ReadArgs(args);
                 stopFile=Get(a,"stop-file",null);
-                if(a.Count==0||a.ContainsKey("help")){Console.WriteLine("NationZkBridge 0.5 RC4 - keep Nation software and SDK unchanged\n\nHardware: NationZkBridge.exe --zk-com COM5 --zk-baud 115200 --antennas 4 --nation-com COM11\nTCP front end (ZK still COM): --zk-com COM5 --antennas 4 --listen 18160\nSimulation only: --simulate --antennas 4 --listen 18160\nOptional: --nation-baud 115200 --max-power 30 --log bridge.log --state-file radio-state.xml\nCOM11 must be one side of an existing virtual null-modem pair. Select its OTHER side in Nation.\nTCP listens only on 127.0.0.1. No automatic physical COM probing. Ctrl+C stops.");return 0;}
-                bool sim=a.ContainsKey("simulate");string port=Get(a,"zk-com",null),nationPort=Get(a,"nation-com",null);
+                if(a.Count==0||a.ContainsKey("help")){Console.WriteLine("NationZkBridge 0.5 RC5 - keep Nation software and SDK unchanged\n\nHardware: NationZkBridge.exe --zk-com COM5 --zk-baud 115200 --antennas 4 --nation-com COM11\nTCP front end (ZK still COM): --zk-com COM5 --antennas 4 --listen 18160\nSimulation only: --simulate --antennas 4 --listen 18160\nOptional: --epc-mode scenario|fresh-pc --nation-baud 115200 --max-power 30 --log bridge.log --state-file radio-state.xml\nCOM11 must be one side of an existing virtual null-modem pair. Select its OTHER side in Nation.\nTCP listens only on 127.0.0.1. No automatic physical COM probing. Ctrl+C stops.");return 0;}
+                string epcMode=Get(a,"epc-mode","scenario");if(epcMode!="scenario"&&epcMode!="fresh-pc")throw new ArgumentException("epc-mode must be scenario or fresh-pc");bool scenario=epcMode=="scenario";bool sim=a.ContainsKey("simulate");string port=Get(a,"zk-com",null),nationPort=Get(a,"nation-com",null);
                 bridgeState=new BridgeState(Get(a,"state-file",null));
                 bool watchPeer=Get(a,"watch-peer","no")=="yes";
                 if(a.ContainsKey("watch-peer")&&(nationPort==null||!watchPeer))throw new ArgumentException("--watch-peer yes requires --nation-com with DSR wired to remote-open");
@@ -49,7 +49,7 @@ namespace NationZkBridge {
                         Log("Nation front end: "+nationPort+" (select the OTHER virtual COM endpoint in Nation)");
                         do {
                             if(watchPeer&&!serial.DsrHolding){Thread.Sleep(100);continue;}
-                            IReader reader=OpenReader(sim,port,baud,antennas,maxPower);
+                            IReader reader=OpenReader(sim,port,baud,antennas,maxPower,scenario);
                             // Serve owns the backend; dropping peer-open cancels inventory and releases ZK.
                             Serve(delegate(byte[] b){if(watchPeer&&!serial.DsrHolding)return 0;return serial.Read(b,0,b.Length);},delegate(byte[] b){if(watchPeer&&!serial.DsrHolding)throw new IOException("Nation port closed");serial.Write(b,0,b.Length);},reader,hostBaud);
                             if(!watchPeer)break;
@@ -60,7 +60,7 @@ namespace NationZkBridge {
                 } else {
                     int listen=int.Parse(a["listen"]);if(listen<1||listen>65535)throw new ArgumentException("listen port out of range");
                     var server=new TcpListener(IPAddress.Loopback,listen);server.Start();
-                    try {Log("Nation TCP front end: 127.0.0.1:"+listen);while(!Stopping){if(!server.Pending()){Thread.Sleep(100);continue;}using(var client=server.AcceptTcpClient()){client.NoDelay=true;using(var stream=client.GetStream()){stream.ReadTimeout=250;stream.WriteTimeout=2000;IReader reader=OpenReader(sim,port,baud,antennas,maxPower);Serve(delegate(byte[] b){return stream.Read(b,0,b.Length);},delegate(byte[] b){stream.Write(b,0,b.Length);},reader,hostBaud);}}}}
+                    try {Log("Nation TCP front end: 127.0.0.1:"+listen);while(!Stopping){if(!server.Pending()){Thread.Sleep(100);continue;}using(var client=server.AcceptTcpClient()){client.NoDelay=true;using(var stream=client.GetStream()){stream.ReadTimeout=250;stream.WriteTimeout=2000;IReader reader=OpenReader(sim,port,baud,antennas,maxPower,scenario);Serve(delegate(byte[] b){return stream.Read(b,0,b.Length);},delegate(byte[] b){stream.Write(b,0,b.Length);},reader,hostBaud);}}}}
                     finally {server.Stop();}
                 }
                 return 0;

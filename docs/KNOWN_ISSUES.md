@@ -1,5 +1,13 @@
 # Trạng thái lỗi — 0.5 RC
 
+## RC5: EPC Scenario và PC cache
+
+- EPC-only liên tục mặc định dùng Scenario. PC đọc thật rồi dùng lại trong phiên, không bảo đảm mới từng lượt; cache bỏ khi Stop. Thẻ trùng EPC trên cùng anten dùng chung PC cache. Có thể chọn `EpcMode=fresh-pc` nếu cần PC mới từng lượt.
+- Thẻ mới chưa có PC phải chờ truy vấn bổ sung; PC đọc lỗi vẫn có thể làm thiếu lượt. Queue giới hạn 4096 lượt, log `overflow` nếu đầy. Không báo PC giả.
+- Khi Scenario đang chạy, Get/Set phần cứng trả busy để không trộn lệnh với luồng dữ liệu; Stop trước khi cấu hình.
+- Đã đo tốc độ trên module 4 anten, chọn ANT2 và ANT1–4/Q2/S0; chưa chứng nhận hiệu năng mọi Session/Target, module 1 anten hoặc mọi firmware. Qua COM52 đã cài đạt 95.9 và 109.3 lượt/giây, vẫn chậm hơn lượt đo Scenario trực tiếp 156.7 lượt/giây. Lượt chọn bốn anten còn 33 lượt chờ PC khi Stop. Không thay dwell/interval CFG7; module quyết định lịch chuyển anten.
+- Xem [điều kiện đo](INVENTORY_PERFORMANCE.md).
+
 ## RC4: tốc độ inventory
 
 - Đã xử lý điểm nghẽn đọc PC riêng sau mỗi EPC bằng mixed inventory. PC thiếu/lỗi vẫn cần đọc bổ sung; TID/User/Reserved vẫn tạo thêm lệnh, nên không bảo đảm count bằng phần mềm ZK chỉ đọc EPC.

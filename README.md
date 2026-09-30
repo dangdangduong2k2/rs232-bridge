@@ -2,11 +2,11 @@
 
 Bộ chuyển giao thức để phần mềm Nation dùng `GReaderApi.dll` kết nối module ZK qua RS232, giữ nguyên phần mềm Nation.
 
-**Bản thử nghiệm 0.5 RC4.** Đã thử đọc và ghi EPC/User trên module ZK 4 anten; chưa thay thế toàn bộ SDK Nation. Xem [các lỗi đã biết](docs/KNOWN_ISSUES.md).
+**Bản thử nghiệm 0.5 RC5.** Đã thử đọc và ghi EPC/User trên module ZK 4 anten; chưa thay thế toàn bộ SDK Nation. Xem [các lỗi đã biết](docs/KNOWN_ISSUES.md).
 
 ## Tải và cài
 
-**[Tải EXE](https://github.com/dangdangduong2k2/rs232-bridge/releases/download/v0.5.0-rc.4/RS232-Bridge-Setup.exe)** · [Trang phát hành](https://github.com/dangdangduong2k2/rs232-bridge/releases/tag/v0.5.0-rc.4)
+**[Tải EXE](https://github.com/dangdangduong2k2/rs232-bridge/releases/download/v0.5.0-rc.5/RS232-Bridge-Setup.exe)** · [Trang phát hành](https://github.com/dangdangduong2k2/rs232-bridge/releases/tag/v0.5.0-rc.5)
 
 Lập trình ứng dụng mới trên Windows/macOS/Linux: dùng **[ZK Reader API — Python SDK + HTTP, source và OpenAPI](https://github.com/dangdangduong2k2/zk-reader-api)**, reader cắm trực tiếp vào máy chạy API.
 
@@ -21,7 +21,7 @@ Windows x64, .NET Framework 4.5 trở lên; cần Internet khi tải driver lầ
 
 ## Chức năng chính
 
-- RC4 giảm độ trễ đọc thẻ bằng cách đọc gộp EPC/PC; [kết quả đo và cách kiểm tra count](docs/INVENTORY_PERFORMANCE.md).
+- RC5 đọc EPC liên tục bằng Scenario, dùng lại PC đã đọc thật trong cùng phiên để ưu tiên tốc độ; TID/User/Reserved hoặc đọc có mask vẫn dùng đường đọc đầy đủ. [Kết quả đo, giới hạn PC cache và cách kiểm tra count](docs/INVENTORY_PERFORMANCE.md).
 - Đọc EPC/TID/User/Reserved, chọn anten, lọc EPC/TID, chống trùng, RSSI, Start/Stop.
 - Ghi EPC/User và chuyển lệnh ghi 6C theo vùng nhớ, bộ lọc và mật khẩu; mỗi lệnh 1–64 word. Khả năng ghi phụ thuộc bộ nhớ và trạng thái khóa của thẻ.
 - Set/Get công suất riêng từng anten; sửa một anten giữ nguyên các anten còn lại.

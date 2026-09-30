@@ -163,7 +163,7 @@ namespace NationComPort {
                 Thread.Sleep(500);
                 Common.Run(Path.Combine(Common.InstallRoot,"diagnostics","NationSerialCheck.exe"),"--serial "+s.NationPort+":115200",55,Log);
                 using(var k=Registry.LocalMachine.CreateSubKey(@"SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\NationComPort")){
-                    k.SetValue("DisplayName","Nation COM Port (ZK bridge)");k.SetValue("DisplayVersion","0.5 RC4");k.SetValue("InstallLocation",Common.InstallRoot);k.SetValue("UninstallString",Common.Quote(target)+" /uninstall");k.SetValue("NoModify",1);k.SetValue("NoRepair",1);
+                    k.SetValue("DisplayName","Nation COM Port (ZK bridge)");k.SetValue("DisplayVersion","0.5 RC5");k.SetValue("InstallLocation",Common.InstallRoot);k.SetValue("UninstallString",Common.Quote(target)+" /uninstall");k.SetValue("NoModify",1);k.SetValue("NoRepair",1);
                 }
                 string pending=Path.Combine(Common.InstallRoot,"pending-pair.txt");if(File.Exists(pending))File.Delete(pending);
                 Log("PASS: original Nation protocol returned real reader firmware through "+s.NationPort);

@@ -56,6 +56,10 @@ namespace NationZkBridge {
         void SetPower(byte power,bool persist);
         List<Tag> Scan(byte antenna,Inventory request,byte q,byte session,byte target,CancellationToken stop);
     }
+    public interface IScenarioReader {
+        bool ScenarioEnabled {get;}
+        void StreamEpc(Inventory request,byte q,byte session,byte target,Action<Tag> report,CancellationToken stop);
+    }
     public sealed class SimReader : IReader,IRadioReader {
         readonly ReaderInfo info;
         byte[] powers;RadioRegion region=new RadioRegion(2,0,49);int profile=146;

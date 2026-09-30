@@ -5,7 +5,7 @@ using System.Runtime.InteropServices;
 using System.Threading;
 
 namespace NationZkBridge {
-    internal static class Native {
+    internal static partial class Native {
         const string Dll="UHFReader288.dll";
         [DllImport(Dll,CallingConvention=CallingConvention.StdCall)] internal static extern int OpenComPort(int port,ref byte address,byte baud,ref int handle);
         [DllImport(Dll,CallingConvention=CallingConvention.StdCall)] internal static extern int CloseSpecComPort(int handle);
@@ -29,7 +29,7 @@ namespace NationZkBridge {
         public readonly int Code;
         public ZkException(string operation,int code):base(operation+" returned ZK 0x"+code.ToString("X2")){Code=code;}
     }
-    public sealed class ZkReader : IReader,ITagWriter,IWriteTransport,IRadioReader {
+    public sealed partial class ZkReader : IReader,ITagWriter,IWriteTransport,IRadioReader,IScenarioReader {
         byte address=255;int handle=-1;readonly ReaderInfo info;
         readonly Action<string> log;
         public static byte BaudCode(int baud) {

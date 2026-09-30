@@ -10,7 +10,7 @@ namespace NationZkBridge {
         readonly object deviceLock=new object();
         readonly DateTime started=DateTime.UtcNow;
         Thread inventoryThread;CancellationTokenSource cancellation;
-        volatile bool disposed;
+        volatile bool disposed,scenarioRunning;
         readonly BridgeState state;
         byte q {get{return state.Active.Q;}} byte session {get{return state.Active.Session;}} byte target {get{return state.Active.Target;}}
         ushort duplicateUnits {get{return state.Active.Duplicate;}} byte rssiThreshold {get{return state.Active.Rssi;}}
@@ -31,6 +31,7 @@ namespace NationZkBridge {
             if(((f.Control>>16)&255)!=1){Error(f,1);return;}
             // This release is RS232/TCP only. Do not pretend to support an RS485 bus.
             if((f.Control&0xF000)!=0){Error(f,4);return;}
+            if(scenarioRunning&&f.Key!=0x2ff&&f.Key!=0x112&&f.Key!=0x100&&f.Key!=0x101&&f.Key!=0x103&&f.Key!=0x200){Error(f,5);return;}
             try {
                 switch(f.Key) {
                     case 0x2ff:
@@ -38,7 +39,7 @@ namespace NationZkBridge {
                     case 0x100:
                         Empty(f);
                         var b=new Bytes().Text(reader.Info.Identity).U32((uint)(DateTime.UtcNow-started).TotalSeconds).Text("Nation-ZK bridge");
-                        b.U8(1).U32(0x00010000).U8(2).Text("ZK compatibility bridge 0.5 RC4");Reply(f,b.ToArray());break;
+                        b.U8(1).U32(0x00010000).U8(2).Text("ZK compatibility bridge 0.5 RC5");Reply(f,b.ToArray());break;
                     case 0x101:
                         Empty(f);Reply(f,new byte[]{0,reader.Info.Version[0],reader.Info.Version[1],0});break;
                     case 0x103:
@@ -142,26 +143,34 @@ namespace NationZkBridge {
             Stop(); // Dispose a completed worker before the next inventory.
             lock(deviceLock){RefreshQuery();}
             cancellation=new CancellationTokenSource();CancellationToken token=cancellation.Token;
+            var scenario=reader as IScenarioReader;
+            scenarioRunning=scenario!=null&&scenario.ScenarioEnabled&&request.Mode==1&&request.TidWords==0&&request.UserWords==0&&request.ReservedWords==0&&request.FilterBits==0;
             inventoryThread=new Thread(delegate(){
                 byte end=0;byte nextTarget=(byte)(target==2?0:target);var recent=new Dictionary<string,DateTime>();
                 var watch=Stopwatch.StartNew();long scanned=0,forwarded=0,rssiDropped=0,duplicateDropped=0,nextLog=5000;
                 Action summary=delegate{log("INVENTORY counts: returned="+scanned+" forwarded="+forwarded+" rssi_filtered="+rssiDropped+" duplicate_filtered="+duplicateDropped+" elapsed_ms="+watch.ElapsedMilliseconds);};
+                Action<Tag> report=delegate(Tag tag){
+                    token.ThrowIfCancellationRequested();scanned++;
+                    if(tag.Rssi<rssiThreshold){rssiDropped++;return;}
+                    if(duplicateUnits>0){
+                        string key=tag.Antenna+":"+BitConverter.ToString(tag.Epc)+":"+BitConverter.ToString(tag.Tid??new byte[0])+":"+BitConverter.ToString(tag.User??new byte[0])+":"+BitConverter.ToString(tag.Reserved??new byte[0])+":"+tag.Result;
+                        DateTime previous;var now=DateTime.UtcNow;
+                        if(recent.TryGetValue(key,out previous)&&(now-previous).TotalMilliseconds<duplicateUnits*10){duplicateDropped++;return;}
+                        if(recent.Count>=100000){var expired=new List<string>();foreach(var entry in recent)if((now-entry.Value).TotalMilliseconds>=duplicateUnits*10)expired.Add(entry.Key);foreach(var k in expired)recent.Remove(k);if(recent.Count>=100000)throw new IOException("Duplicate filter capacity reached");}
+                        recent[key]=now;
+                    }
+                    Notice(origin,0,tag.ToNation());forwarded++;
+                    if(watch.ElapsedMilliseconds>=nextLog){summary();nextLog=watch.ElapsedMilliseconds+5000;}
+                };
                 log("INVENTORY start: antennas="+request.Antennas+" Q="+q+" Session="+session+" Target="+target+" TID_words="+request.TidWords+" User_words="+request.UserWords+" Reserved_words="+request.ReservedWords+" duplicate_10ms="+duplicateUnits+" min_rssi="+rssiThreshold);
                 try {
-                    do {
+                    if(scenarioRunning){lock(deviceLock){scenario.StreamEpc(request,q,session,target,report,token);}}
+                    else do {
                         for(byte ant=1;ant<=reader.Info.Antennas;ant++) {
                             if((request.Antennas&(1u<<(ant-1)))==0)continue;
                             token.ThrowIfCancellationRequested();List<Tag> tags;
                             lock(deviceLock){tags=reader.Scan(ant,request,q,session,nextTarget,token);}
-                            scanned+=tags.Count;
-                            foreach(var tag in tags) {
-                                token.ThrowIfCancellationRequested();if(tag.Rssi<rssiThreshold){rssiDropped++;continue;}
-                                if(duplicateUnits>0){
-                                    string key=tag.Antenna+":"+BitConverter.ToString(tag.Epc)+":"+BitConverter.ToString(tag.Tid??new byte[0])+":"+BitConverter.ToString(tag.User??new byte[0])+":"+BitConverter.ToString(tag.Reserved??new byte[0])+":"+tag.Result;
-                                    DateTime previous;var now=DateTime.UtcNow;if(recent.TryGetValue(key,out previous)&&(now-previous).TotalMilliseconds<duplicateUnits*10){duplicateDropped++;continue;}if(recent.Count>=100000){var expired=new List<string>();foreach(var entry in recent)if((now-entry.Value).TotalMilliseconds>=duplicateUnits*10)expired.Add(entry.Key);foreach(var k in expired)recent.Remove(k);if(recent.Count>=100000)throw new IOException("Duplicate filter capacity reached");}recent[key]=now;
-                                }
-                                Notice(origin,0,tag.ToNation());forwarded++;
-                            }
+                            foreach(var tag in tags)report(tag);
                         }
                         if(watch.ElapsedMilliseconds>=nextLog){summary();nextLog=watch.ElapsedMilliseconds+5000;}
                         if(target==2)nextTarget^=1;
@@ -169,7 +178,7 @@ namespace NationZkBridge {
                     if(token.IsCancellationRequested)end=1;
                 }catch(OperationCanceledException){end=1;}
                  catch(Exception ex){end=2;log("INVENTORY ERROR: "+ex.Message);}
-                finally{summary();try{Notice(origin,1,new byte[]{end});}catch(Exception ex){log("End report not delivered: "+ex.Message);}}
+                finally{scenarioRunning=false;summary();try{Notice(origin,1,new byte[]{end});}catch(Exception ex){log("End report not delivered: "+ex.Message);}}
             });
             inventoryThread.IsBackground=true;inventoryThread.Name="ZK inventory";
             ReplyCode(origin,0);inventoryThread.Start();

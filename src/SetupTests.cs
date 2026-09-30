@@ -9,6 +9,7 @@ class SetupTests {
     static Settings Valid(){return new Settings{PhysicalPort="COM49",PhysicalId=@"USB\VID_10C4&PID_EA60\unique",NationPort="COM5",BridgePort="COM6",Pair=0};}
     static int Main(){try{
         var s=Valid();s.Validate();Assert(true,"valid settings");
+        Assert(s.EpcMode=="scenario","default continuous EPC mode is Scenario");s.EpcMode="fresh-pc";s.Validate();Assert(true,"fresh-PC mode accepted");s.EpcMode="unknown";Reject(s.Validate,"unknown EPC mode rejected");
         foreach(string bad in new[]{"COM0","COM1\n","COM49 --listen 9","COM1&whoami","LPT1","COM-2"}){s=Valid();s.PhysicalPort=bad;Reject(s.Validate,"reject invalid COM: "+bad.Replace("\n","newline"));}
         s=Valid();s.BridgePort=s.PhysicalPort;Reject(s.Validate,"reject loop to physical port");
         s=Valid();s.Antennas=2;Reject(s.Validate,"reject unsupported antenna count");

@@ -5,7 +5,7 @@ $testDir = Join-Path $root 'test-results'
 $bridge = Join-Path $root 'payload\bin\x64\NationZkBridge.exe'
 Copy-Item -LiteralPath $bridge -Destination $testDir
 Copy-Item -LiteralPath (Join-Path $root 'bridge-tests\vendor\GReaderApi.dll') -Destination $testDir
-foreach ($test in @('ProtocolTests','RadioTests','MixedInventoryTests','SdkIntegration','RadioSdk')) {
+foreach ($test in @('ProtocolTests','RadioTests','MixedInventoryTests','ScenarioTests','SdkIntegration','RadioSdk')) {
     $reference = if ($test -in @('SdkIntegration','RadioSdk')) { 'GReaderApi.dll' } else { 'NationZkBridge.exe' }
     & $compiler /nologo /platform:x64 "/out:$testDir\$test.exe" "/r:$testDir\$reference" (Join-Path $root "bridge-tests\$test.cs")
     if ($LASTEXITCODE -ne 0) { throw 'Test compile failed' }
@@ -21,6 +21,8 @@ if ($LASTEXITCODE -ne 0) { throw 'Protocol tests failed' }
 if ($LASTEXITCODE -ne 0) { throw 'Radio tests failed' }
 & (Join-Path $testDir 'MixedInventoryTests.exe') | Tee-Object -FilePath (Join-Path $testDir 'mixed-inventory-tests.txt')
 if ($LASTEXITCODE -ne 0) { throw 'Mixed inventory tests failed' }
+& (Join-Path $testDir 'ScenarioTests.exe') | Tee-Object -FilePath (Join-Path $testDir 'scenario-tests.txt')
+if ($LASTEXITCODE -ne 0) { throw 'Scenario tests failed' }
 & $compiler /nologo /platform:x64 "/out:$testDir\WriteTests.exe" "/r:$testDir\NationZkBridge.exe" "/r:$testDir\GReaderApi.dll" (Join-Path $root 'bridge-tests\WriteTests.cs')
 if ($LASTEXITCODE -ne 0) { throw 'Write test compile failed' }
 & (Join-Path $testDir 'WriteTests.exe') | Tee-Object -FilePath (Join-Path $testDir 'write-tests.txt')

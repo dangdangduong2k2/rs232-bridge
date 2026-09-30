@@ -1,5 +1,14 @@
 # Kiểm chứng 0.5 RC — 28/09/2026
 
+## RC5: Scenario — 30/09/2026
+
+- 20 assertion Scenario: CRC/frame/antenna/phase, chia nhỏ/gộp packet, không tạo PC giả, cache/queue giới hạn, giữ lượt EPC trùng, cache mới mỗi phiên, busy không deadlock, Stop cleanup.
+- Native Scenario trực tiếp trên ANT2/Q2/S0: 1572 lượt/10.030 s, 9 EPC khác nhau. Qua SDK Nation/TCP: 1512 lượt/10.357 s, đủ 9 EPC, không sai trường dữ liệu hoặc báo cáo sau Stop; không còn bản ghi chờ PC/overflow ở cuối phiên.
+- `ScenarioCleanupHardware`: đặt tạm CFG10/CFG11 rồi gây lỗi callback; xác nhận anten/TID/mask khôi phục. Bài test khôi phục cấu hình gốc, đọc lại đúng; không ghi dữ liệu thẻ.
+- Cài RC5 thành công, dịch vụ Running và SHA256 worker đã cài khớp build. SDK Nation gốc qua COM52: ANT2 nhận 1034 báo cáo/10.785 s (95.9/s, 8 EPC); chọn ANT1–4 nhận 1777 báo cáo/16.262 s (109.3/s, 43 EPC). Cả hai không sai trường EPC/PC/antenna, Stop bình thường, không báo cáo muộn. Lượt bốn anten còn 33 lượt chờ PC khi Stop, overflow=0; chưa đạt tốc độ Scenario trực tiếp.
+- Suite local đạt: 27 packaging, 18 protocol, 60 radio, 18 mixed inventory, 20 Scenario, 39 write, 35 SDK integration, 170 RadioSdk. Giải nén bộ cài đối chiếu đủ 20 file khớp SHA256.
+- [Chi tiết và giới hạn so sánh](INVENTORY_PERFORMANCE.md). Đây là EPC-only với PC dùng lại trong phiên, không phải nghiệm thu PC mới ở mỗi lượt.
+
 ## RC4: inventory — 30/09/2026
 
 - Thêm 18 assertion mixed inventory: ghép PC theo sequence, không ghép sai dữ liệu, giữ các lượt EPC trùng và chuyển đủ 100 báo cáo khi chống trùng tắt.

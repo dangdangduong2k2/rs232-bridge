@@ -16,7 +16,9 @@ namespace NationComPort {
     public class Settings {
         public string PhysicalPort, PhysicalId, NationPort, BridgePort;
         public int Baud=115200, Antennas=4, Pair=-1;
+        public string EpcMode="scenario";
         public void Validate() {
+            if(EpcMode!="scenario"&&EpcMode!="fresh-pc")throw new InvalidDataException("EpcMode must be scenario or fresh-pc.");
             foreach(string p in new[]{PhysicalPort,NationPort,BridgePort})
                 if(p==null||!Regex.IsMatch(p,@"\ACOM[1-9][0-9]{0,3}\z"))throw new InvalidDataException("Cổng COM không hợp lệ.");
             if(new[]{PhysicalPort,NationPort,BridgePort}.Distinct(StringComparer.OrdinalIgnoreCase).Count()!=3)

@@ -27,6 +27,7 @@ namespace NationComPort {
                     if(File.Exists(stopFile))File.Delete(stopFile);
                     string exe=Path.Combine(Common.InstallRoot,"bin",Common.Arch,"NationZkBridge.exe");
                     string args="--zk-com "+port+" --zk-baud "+s.Baud+" --antennas "+s.Antennas+" --nation-com "+s.BridgePort+" --nation-baud 115200 --watch-peer yes --stop-file "+Common.Quote(stopFile)+" --state-file "+Common.Quote(Path.Combine(Common.DataRoot,"radio-state.xml"));
+                    args+=" --epc-mode "+s.EpcMode;
                     using(var child=new Process()){
                         child.StartInfo=new ProcessStartInfo(exe,args){UseShellExecute=false,CreateNoWindow=true,WorkingDirectory=Path.GetDirectoryName(exe),RedirectStandardOutput=true,RedirectStandardError=true};
                         child.OutputDataReceived+=delegate(object sender,DataReceivedEventArgs e){if(e.Data==null)return;Log(e.Data);if(e.Data.Contains("Nation front end:"))State("Sẵn sàng: Nation COM Port ("+s.NationPort+") → "+port);if(e.Data.Contains("FATAL:"))State(e.Data);};

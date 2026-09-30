@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.5 RC5 — 2026-09-30
+
+- EPC-only liên tục dùng native Scenario stream, tái sử dụng PC đã đọc thật trong cùng Start–Stop theo lựa chọn ưu tiên tốc độ. Không cache EPC/RSSI hoặc tự nhân count.
+- Đọc một lần/có mask/TID/User/Reserved vẫn dùng mixed inventory; thêm `EpcMode=fresh-pc` để giữ PC mới từng lượt khi cần.
+- Cache và hàng đợi giới hạn, đọc PC cho thẻ mới, kiểm tra CRC/frame/antenna, xử lý no-data `0xFB`, dừng/khôi phục anten/TID/mask trên lỗi.
+- Chặn lệnh phần cứng đồng thời khi Scenario chạy; Stop vẫn xử lý được. Cache bỏ mỗi phiên, không lưu xuống đĩa.
+- Test 20 assertion Scenario và kiểm tra cleanup trên phần cứng. Cùng ANT2/Q2/S0: Scenario gốc ~156.7 lượt/giây, qua SDK Nation/TCP ~146.0 lượt/giây; xem tài liệu hiệu năng để biết phạm vi và điều kiện.
+
 ## 0.5 RC4 — 2026-09-30
 
 - Sửa inventory chậm/mất lượt: đọc EPC và PC trong cùng lệnh mixed inventory, chỉ đọc PC riêng khi thiếu. Giữ từng lượt thẻ, không tạo PC hoặc nhân count giả.
