@@ -17,6 +17,8 @@ Lập trình ứng dụng mới trên Windows/macOS/Linux: dùng **[ZK Reader AP
 
 Không chọn `Nation Bridge Internal` hoặc COM vật lý ZK trong Nation. Dịch vụ tự chạy cùng Windows. **cancel** đóng bộ cài.
 
+Chrome có thể vẫn hiển thị `com0com` do dùng tên driver báo lên. [Source chuẩn bị đổi tên driver](driver-branding/README.md) đã có riêng; chưa build/ký/cài, nên EXE RC6 chưa đổi tên trong Chrome.
+
 Windows x64, .NET Framework 4.5 trở lên; cần Internet khi tải driver lần đầu. Driver USB của adapter cần có sẵn. EXE bộ cài chưa ký Authenticode; driver COM ảo tải từ Microsoft Update Catalog và kiểm tra SHA256.
 
 ## Chức năng chính
