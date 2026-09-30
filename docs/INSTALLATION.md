@@ -12,7 +12,7 @@ Adapter USB phải hiện COM hoạt động trong Device Manager trước khi c
 
 ## Cài mới
 
-1. Tải [RS232-Bridge-Setup.exe](https://github.com/dangdangduong2k2/rs232-bridge/releases/download/v0.5.0-rc.5/RS232-Bridge-Setup.exe).
+1. Tải [RS232-Bridge-Setup.exe](https://github.com/dangdangduong2k2/rs232-bridge/releases/download/v0.5.0-rc.6/RS232-Bridge-Setup.exe).
 2. Cắm module, xác định COM vật lý trong **Device Manager → Ports (COM & LPT)**.
 3. Đóng Nation và mọi phần mềm ZK/serial terminal đang mở cổng.
 4. Chạy EXE. Cửa sổ chính chỉ có `driver RS232 brigde`, `setup` và `cancel`.

@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.5 RC6 — 2026-09-30
+
+- Sửa khoảng đứng count định kỳ: không gọi `GetRfidTagData` sau `StopRead`. Đây là receive có timeout, không phải thao tác lấy nhanh dữ liệu còn trong queue; trên module thử, lần gọi thừa này chờ khoảng 1.3 giây.
+- Mỗi đợt bổ sung PC chọn tối đa 4 khóa, ngừng bắt đầu lệnh tiếp theo khi đã dùng 200 ms. Một lệnh native đang chạy vẫn phải chờ hoàn tất. Các lần bổ sung cách nhau ít nhất 5 giây; thẻ lỗi PC thử lại sau 30/60/120 giây, không làm ngừng mọi anten theo nhịp 5 giây mãi mãi.
+- Không dừng Scenario khi toàn bộ PC còn thiếu đang trong thời gian chờ thử lại. Giữ PC thật theo phiên và các lượt quan sát thực; không phát dữ liệu giả để che khoảng ngừng.
+- Thêm log thời gian mỗi khoảng bảo trì và phép đo khoảng cách giữa callback SDK Nation, kiểm thử retry/eviction/fairness.
+
 ## 0.5 RC5 — 2026-09-30
 
 - EPC-only liên tục dùng native Scenario stream, tái sử dụng PC đã đọc thật trong cùng Start–Stop theo lựa chọn ưu tiên tốc độ. Không cache EPC/RSSI hoặc tự nhân count.

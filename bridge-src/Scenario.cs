@@ -36,15 +36,25 @@ namespace NationZkBridge {
     // Lifetime is exactly one Nation Start/Stop session. Never infer or persist PC.
     public sealed class ScenarioPcCache {
         readonly Dictionary<string,ushort> pc=new Dictionary<string,ushort>();
+        sealed class Retry {public int Failures;public long Due;}
+        readonly Dictionary<string,Retry> retries=new Dictionary<string,Retry>();
         readonly List<Tag> pending=new List<Tag>();readonly int capacity;
         public long Dropped {get;private set;}
         public int Pending {get{return pending.Count;}}
         public ScenarioPcCache(int limit){if(limit<1)throw new ArgumentOutOfRangeException("limit");capacity=limit;}
         static string Key(Tag t){return t.Antenna+":"+BitConverter.ToString(t.Epc);}
-        public void Remember(Tag t){if(!t.PcKnown)throw new InvalidDataException("PC must be read from hardware");string key=Key(t);if(pc.Count>=65536&&!pc.ContainsKey(key))throw new IOException("Scenario PC cache capacity reached");pc[key]=t.Pc;}
+        public void Remember(Tag t){if(!t.PcKnown)throw new InvalidDataException("PC must be read from hardware");string key=Key(t);if(pc.Count>=65536&&!pc.ContainsKey(key))throw new IOException("Scenario PC cache capacity reached");pc[key]=t.Pc;retries.Remove(key);}
         public bool Apply(Tag t){ushort value;if(!pc.TryGetValue(Key(t),out value))return false;t.Pc=value;t.PcKnown=true;return true;}
         public void Queue(Tag t){if(pending.Count>=capacity){pending.RemoveAt(0);Dropped++;}pending.Add(t);}
-        public List<Tag> Unknown(int limit){var result=new List<Tag>();var seen=new HashSet<string>();foreach(var t in pending)if(!pc.ContainsKey(Key(t))&&seen.Add(Key(t))){result.Add(t);if(result.Count>=limit)break;}return result;}
+        public List<Tag> Unknown(int limit,long now){
+            if(limit<1)throw new ArgumentOutOfRangeException("limit");
+            var result=new List<Tag>();var seen=new HashSet<string>();
+            foreach(var t in pending){string key=Key(t);if(pc.ContainsKey(key)||!seen.Add(key))continue;Retry retry;if(result.Count<limit&&(!retries.TryGetValue(key,out retry)||now>=retry.Due))result.Add(t);}
+            // Evicted observations must not leave an unbounded retry table behind.
+            var expired=new List<string>();foreach(string key in retries.Keys)if(!seen.Contains(key))expired.Add(key);foreach(string key in expired)retries.Remove(key);
+            return result;
+        }
+        public void Failed(Tag t,long now){string key=Key(t);Retry retry;if(!retries.TryGetValue(key,out retry)){if(retries.Count>=capacity)throw new IOException("Scenario retry capacity reached");retry=new Retry();retries[key]=retry;}retry.Failures=Math.Min(3,retry.Failures+1);retry.Due=now+(30000L<<(retry.Failures-1));}
         public List<Tag> Resolve(){var ready=new List<Tag>();for(int i=0;i<pending.Count;){if(Apply(pending[i])){ready.Add(pending[i]);pending.RemoveAt(i);}else i++;}return ready;}
     }
     public sealed partial class ZkReader {
@@ -68,15 +78,21 @@ namespace NationZkBridge {
                 Check("Scenario selected antennas",((IWriteTransport)this).SetAntennaMask((byte)(128|request.Antennas)));
                 foreach(var tag in cache.Resolve())emit(tag);
             };
-            Action fillMissing=delegate{
-                foreach(var tag in cache.Unknown(32)){
+            Func<List<Tag>,int> fillMissing=delegate(List<Tag> missing){
+                int attempts=0;long began=watch.ElapsedMilliseconds;
+                foreach(var tag in missing){
+                    // A native transaction cannot be interrupted, but never start another
+                    // once this pause has spent 200 ms reading PC (at most four candidates).
+                    if(attempts>0&&watch.ElapsedMilliseconds-began>=200)break;
                     stop.ThrowIfCancellationRequested();antChanged=true;
+                    attempts++;
                     Check("Missing PC antenna",((IWriteTransport)this).SetAntennaMask((byte)(128|(1<<(tag.Antenna-1)))));
                     int rc,error;var pc=ReadWords(tag,1,1,1,request.Password,out rc,out error);CheckTransport(rc);
-                    if(pc!=null){tag.Pc=(ushort)((pc[0]<<8)|pc[1]);tag.PcKnown=true;cache.Remember(tag);}
+                    if(pc!=null){tag.Pc=(ushort)((pc[0]<<8)|pc[1]);tag.PcKnown=true;cache.Remember(tag);}else cache.Failed(tag,watch.ElapsedMilliseconds);
                 }
                 Check("Resume Scenario antennas",((IWriteTransport)this).SetAntennaMask((byte)(128|request.Antennas)));
                 foreach(var tag in cache.Resolve())emit(tag);
+                return attempts;
             };
             try{
                 // Scenario uses device-level TID/mask/antenna settings. Match the Nation request
@@ -92,18 +108,24 @@ namespace NationZkBridge {
                 while(!stop.IsCancellationRequested){
                     int length=FetchScenario(data);
                     foreach(var tag in parser.Feed(data,length)){received++;if(cache.Apply(tag))emit(tag);else cache.Queue(tag);}
-                    bool refresh=cache.Pending>0&&watch.ElapsedMilliseconds>=refreshAt;
+                    // A small bounded PC batch per pause. Repeated failures back off
+                    // independently, so a weak tag cannot stop every reader antenna every 5 s.
+                    List<Tag> missing=null;
+                    if(cache.Pending>0&&watch.ElapsedMilliseconds>=refreshAt){missing=cache.Unknown(4,watch.ElapsedMilliseconds);refreshAt=watch.ElapsedMilliseconds+500;}
+                    bool refresh=missing!=null&&missing.Count>0;
                     bool rotate=target==2&&session>0&&watch.ElapsedMilliseconds>=rotateAt;
                     if(refresh||rotate){
+                        long pauseAt=watch.ElapsedMilliseconds;
                         Check("Stop Scenario for refresh",Native.StopRead(ref address,handle));active=false;
-                        // Drain complete observations queued before Stop; never pair partial frames
-                        // from separate streams. Refresh reads the missing PC without fake values.
-                        int tail=FetchScenario(data);
-                        foreach(var tag in parser.Feed(data,tail)){received++;if(cache.Apply(tag))emit(tag);else cache.Queue(tag);}
+                        long stoppedAt=watch.ElapsedMilliseconds;
+                        // GetRfidTagData is a blocking receive, not a nonblocking queue drain.
+                        // Calling it after StopRead waits ~1.3 s for data that cannot arrive.
+                        // All complete frames from the last receive were handled above.
                         if(rotate)nextTarget^=1;
-                        if(refresh){fillMissing();refreshAt=watch.ElapsedMilliseconds+5000;}
+                        int attempts=0;if(refresh){attempts=fillMissing(missing);refreshAt=watch.ElapsedMilliseconds+5000;}
                         parser=new ScenarioParser(address,request.Antennas);rotateAt=watch.ElapsedMilliseconds+1000;
                         stop.ThrowIfCancellationRequested();active=true;Check("Restart Scenario",Native.StartRead(ref address,nextTarget,handle));
+                        log("SCENARIO pause: reason="+(refresh?"missing_pc":"target_rotation")+" attempts="+attempts+" stop_ms="+(stoppedAt-pauseAt)+" total_ms="+(watch.ElapsedMilliseconds-pauseAt));
                     }
                     if(watch.ElapsedMilliseconds>=logAt){log("SCENARIO counts: raw="+received+" emitted="+sent+" awaiting_pc="+cache.Pending+" overflow="+cache.Dropped+" elapsed_ms="+watch.ElapsedMilliseconds);logAt=watch.ElapsedMilliseconds+5000;}
                     if(length==0)stop.WaitHandle.WaitOne(2);

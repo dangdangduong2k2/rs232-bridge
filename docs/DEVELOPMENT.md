@@ -61,7 +61,7 @@ Set-Content .\dist\SHA256SUMS.txt "$releaseHash  RS232-Bridge-Setup.exe" -Encodi
 ```
 
 4. Kiểm tra staged diff, tài liệu liên kết và không commit log/cấu hình máy/thẻ thật.
-5. Commit, tạo tag cho phiên bản, push và tạo GitHub Release kèm EXE + `SHA256SUMS.txt`. Bản 0.5 dùng tag `v0.5.0-rc.5` và đánh dấu prerelease.
+5. Commit, tạo tag cho phiên bản, push và tạo GitHub Release kèm EXE + `SHA256SUMS.txt`. Bản 0.5 dùng tag `v0.5.0-rc.6` và đánh dấu prerelease.
 6. Tải lại asset từ release và đối chiếu SHA256 với file trong `dist/`. Không sửa đè asset của một bản đã công bố; thay đổi tiếp theo dùng phiên bản mới.
 
 GitHub tự cung cấp source ZIP/TAR theo tag. Người dùng cuối chỉ cần EXE và tài liệu cài; người sửa code clone repository.

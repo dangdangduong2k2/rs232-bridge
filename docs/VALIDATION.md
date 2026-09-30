@@ -1,5 +1,13 @@
 # Kiểm chứng 0.5 RC — 28/09/2026
 
+## RC6: khoảng ngừng — 30/09/2026
+
+- RC5 qua COM52 trong 40 giây: khoảng callback lớn nhất 3543 ms, 5 khoảng ≥ 1 giây. Instrumentation trên reader xác nhận `GetRfidTagData` sau Stop chờ 1291–1304 ms.
+- RC6 qua SDK Nation/TCP trong 45 giây: 7004 báo cáo (154.8/s), khoảng callback lớn nhất 420 ms, không khoảng ≥ 500 ms; không sai EPC/PC/anten hoặc báo cáo sau Stop. Còn 356 lượt chờ PC khi dừng, overflow=0.
+- RC6 đã cài qua COM52 trong 60 giây: 9332 báo cáo, 41 EPC, 154.6/s; khoảng callback lớn nhất 421 ms, không khoảng ≥ 500 ms. Không sai trường dữ liệu, Stop bình thường, không báo cáo muộn. Còn 576 lượt chờ PC, overflow=0. Hash worker đã cài khớp build và dịch vụ Running.
+- 27 assertion Scenario, gồm regression retry 30/60/120 giây, thẻ lỗi không chặn thẻ mới, giới hạn ứng viên, giữ lượt chờ và giải phóng retry của khóa đã bị loại khỏi queue. Suite local: 27 packaging, 18 protocol, 60 radio, 18 mixed inventory, 39 write, 35 SDK integration, 170 RadioSdk; self-extraction 20 file khớp hash.
+- [Điều kiện đo và giới hạn](INVENTORY_PERFORMANCE.md). Không bảo đảm không có khoảng nghỉ với mọi thẻ/firmware/Session; native call đang chạy không thể hủy ở mốc ngân sách 200 ms.
+
 ## RC5: Scenario — 30/09/2026
 
 - 20 assertion Scenario: CRC/frame/antenna/phase, chia nhỏ/gộp packet, không tạo PC giả, cache/queue giới hạn, giữ lượt EPC trùng, cache mới mỗi phiên, busy không deadlock, Stop cleanup.

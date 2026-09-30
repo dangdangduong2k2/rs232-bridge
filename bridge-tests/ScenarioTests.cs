@@ -39,6 +39,15 @@ class ScenarioTests {
         var ready=cache.Resolve();Check(ready.Count==2&&ready[0].Pc==0x1234&&ready[0].Rssi==62&&ready[1].Rssi==63,"Pending observations keep their own RSSI and real PC");
         Check(!cache.Apply(T(1,60)),"PC cache separated by antenna");
         Check(!new ScenarioPcCache(2).Apply(T(2,60)),"Fresh session cannot reuse previous PC");
+        var scheduled=new ScenarioPcCache(3);var weak=T(1,50);var fresh=T(2,60);scheduled.Queue(weak);scheduled.Queue(weak);scheduled.Queue(fresh);
+        Check(scheduled.Unknown(1,0).Count==1,"Only one PC candidate per maintenance pause");
+        scheduled.Failed(weak,0);var due=scheduled.Unknown(1,1);Check(due.Count==1&&due[0].Antenna==2,"Failed tag and repeated observations cannot starve a new tag");
+        fresh.PcKnown=true;fresh.Pc=0x0800;scheduled.Remember(fresh);scheduled.Resolve();
+        Check(scheduled.Unknown(1,29999).Count==0&&scheduled.Unknown(1,30000).Count==1,"Failed PC does not cause five-second periodic restarts");
+        scheduled.Failed(weak,30000);Check(scheduled.Unknown(1,89999).Count==0&&scheduled.Unknown(1,90000).Count==1,"Second failure backs off sixty seconds");
+        scheduled.Failed(weak,90000);Check(scheduled.Unknown(1,209999).Count==0&&scheduled.Unknown(1,210000).Count==1,"Further failures back off two minutes");
+        weak.PcKnown=true;weak.Pc=0x0800;scheduled.Remember(weak);Check(scheduled.Resolve().Count==2&&scheduled.Unknown(1,500000).Count==0,"Successful retry releases each real pending observation and clears retry");
+        var eviction=new ScenarioPcCache(1);var evicted=T(1,50);eviction.Queue(evicted);eviction.Failed(evicted,0);eviction.Queue(T(2,60));eviction.Unknown(1,1);eviction.Failed(T(2,60),1);eviction.Queue(T(1,50));Check(eviction.Unknown(1,2).Count==1,"Evicted keys release retry state and its capacity");
         var reader=new Streaming();int forwarded=0,endCode=-1;var frames=new List<Frame>();var sync=new object();var ended=new ManualResetEvent(false);
         using(var bridge=new Bridge(reader,delegate(Frame f){lock(sync){frames.Add(f);if(f.Control==0x00011200)forwarded++;if(f.Control==0x00011201){endCode=f.Data[0];ended.Set();}}},delegate(string s){},115200)){
             bridge.Handle(new Frame(0x00010210,new Bytes().U32(1).U8(1).ToArray()));Check(reader.Started.WaitOne(2000),"Scenario stream selected for continuous EPC");

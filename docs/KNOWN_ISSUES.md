@@ -1,5 +1,10 @@
 # Trạng thái lỗi — 0.5 RC
 
+## RC6: khoảng ngừng định kỳ
+
+- Đã bỏ receive sau Stop gây timeout khoảng 1.3 giây trong RC5; hạn chế từng đợt đọc PC và giãn retry thẻ lỗi. Xem [cơ chế và phép đo](INVENTORY_PERFORMANCE.md).
+- Thẻ mới thiếu PC vẫn cần dừng ngắn để bổ sung. Đây không phải bảo đảm RF không bao giờ gián đoạn; một lệnh native đang chạy có thể vượt ngân sách 200 ms. Thẻ đọc PC lỗi có thể chờ đến 120 giây trước lần thử tiếp theo; queue vẫn giới hạn 4096 lượt.
+
 ## RC5: EPC Scenario và PC cache
 
 - EPC-only liên tục mặc định dùng Scenario. PC đọc thật rồi dùng lại trong phiên, không bảo đảm mới từng lượt; cache bỏ khi Stop. Thẻ trùng EPC trên cùng anten dùng chung PC cache. Có thể chọn `EpcMode=fresh-pc` nếu cần PC mới từng lượt.

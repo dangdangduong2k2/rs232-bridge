@@ -1,6 +1,30 @@
-# Tốc độ inventory — RC5
+# Tốc độ inventory — RC6
 
-## RC5: dùng Scenario cho EPC liên tục
+## RC6: sửa khoảng ngừng định kỳ
+
+RC5 đã dùng Scenario nhưng vẫn dừng để bổ sung PC theo từng nhóm tối đa 32 khóa. Sau `StopRead`, bridge gọi `GetRfidTagData` thêm một lần với mục đích lấy dữ liệu còn lại. Đo trực tiếp cho thấy đây là receive có timeout: riêng lần gọi sau Stop chờ 1291–1304 ms. Đó là phần mềm tự tạo khoảng ngừng, không phải Nation yêu cầu Stop.
+
+RC6 bỏ lần nhận sau Stop. Mọi frame hoàn chỉnh đã nhận trước Stop được xử lý; parser bắt đầu mới sau restart, không ghép frame dở dang qua hai luồng. Mỗi đợt bổ sung PC chọn tối đa 4 khóa EPC/anten và không bắt đầu lệnh tiếp theo nếu đã dùng 200 ms; một lệnh native đang chạy không thể hủy giữa chừng. Thẻ lỗi PC có thời gian thử lại 30, 60 rồi tối đa 120 giây. Các đợt bổ sung cách nhau ít nhất 5 giây; nếu không có khóa đến hạn thì không Stop/Start.
+
+Điều này giảm khoảng ngừng do bridge, **không cam kết luồng RF hoàn toàn không có khoảng nghỉ**. Thẻ mới cần PC vẫn có thể tạo khoảng dừng ngắn; thẻ PC lỗi có thể xuất hiện muộn hoặc chưa tới Nation. Chuyển Target/anten, điều kiện RF và timeout thiết bị vẫn ảnh hưởng. Không phát lại EPC cũ để giữ count chạy trong khoảng không đọc được.
+
+Log `SCENARIO pause` ghi lý do, số lần đọc PC, thời gian Stop và tổng thời gian; không ghi mã thẻ. Bài `InventoryHardwareSdk` đo khoảng cách callback (`REPORT GAPS`), gồm warmup nhưng không gồm chờ báo cáo đầu tiên và thời gian Stop.
+
+### Đo khoảng ngừng ngày 30/09/2026
+
+Cùng module type 0x75/firmware 2.8, COM49/115200, chọn ANT1–4, Q2/S0, không đổi công suất/profile/tần số:
+
+| Bản / đường nhận | Lượt / thời gian | Lượt/giây | Khoảng callback lớn nhất | Khoảng ≥ 1 giây |
+|---|---:|---:|---:|---:|
+| RC5 đã cài / COM52 | 4848 / 40.319 s | 120.2 | 3543 ms | 5 |
+| RC6 / TCP loopback | 7004 / 45.260 s | 154.8 | 420 ms | 0 |
+| RC6 đã cài / COM52 | 9332 / 60.360 s | 154.6 | 421 ms | 0 |
+
+Lượt RC6/TCP cũng không có khoảng ≥ 500 ms. Log bảo trì PC cuối phép đo khoảng 342–385 ms; không còn 1.3 giây chờ receive sau Stop. SDK nhận trường EPC/PC/anten hợp lệ và Stop bình thường, không báo cáo muộn. RC6 còn 356 lượt chờ PC khi dừng, overflow=0; chưa thể coi mọi lượt EPC đã tới Nation. Đây là các phép đo tuần tự, khác đường nhận và tập thẻ nhận được (45/41 EPC), không quy toàn bộ chênh lệch tốc độ cho một thay đổi hoặc coi là bảo đảm thời gian thực.
+
+Sau khi cài RC6, hash worker khớp build và dịch vụ Running. Lượt 60 giây qua COM52 nhận 9332 báo cáo, 41 EPC, không sai trường dữ liệu hoặc báo cáo sau Stop; cũng không có khoảng ≥ 500 ms. Log `returned=9332 forwarded=9332`, không lọc RSSI/chống trùng; còn 576 lượt chờ PC và overflow=0 khi Stop. Các khoảng dừng bảo trì ngắn vẫn tồn tại; kết quả này xác nhận đã bỏ các khoảng ngừng dài lặp lại trên bộ thẻ thử, không phải đã chuyển đầy đủ mọi frame EPC bất kể PC.
+
+## RC5: cơ chế Scenario và kết quả trước sửa khoảng ngừng
 
 Khi Nation chọn Inventory liên tục, không yêu cầu TID/User/Reserved và không có mask thẻ, bridge dùng `StartRead` / `GetRfidTagData` / `StopRead`, cùng cơ chế Scenario-mode của demo ZK. Không đổi phần mềm Nation hoặc cổng kết nối.
 
